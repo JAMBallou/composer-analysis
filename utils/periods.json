@@ -1,0 +1,23 @@
+{
+    "Baroque": [
+        "Johann Sebastian Bach",
+        "Domenico Scarlatti"
+    ],
+    "Classical": [
+        "Wolfgang Amadeus Mozart",
+        "Joseph Haydn",
+        "Ludwig van Beethoven",
+        "Franz Schubert"
+    ],
+    "Romantic": [
+        "Frédéric Chopin",
+        "Franz Schubert",
+        "Franz Liszt",
+        "Sergei Rachmaninoff",
+        "Robert Schumann",
+        "Claude Debussy",
+        "Alexander Scriabin",
+        "Felix Mendelssohn",
+        "Johannes Brahms"
+    ]
+}
