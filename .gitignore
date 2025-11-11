@@ -1,4 +1,5 @@
-/instrument-samples-philharmonia
+/data/instrument-samples-philharmonia
+/data/maestro-v3.0.0
 /py
 /maestro-v3.0.0.json
 /test.py
