@@ -1,5 +1,14 @@
 /data/instrument-samples-philharmonia
-/data/maestro-v3.0.0
+/data/maestro-v3.0.0/2004
+/data/maestro-v3.0.0/2006
+/data/maestro-v3.0.0/2008
+/data/maestro-v3.0.0/2009
+/data/maestro-v3.0.0/2011
+/data/maestro-v3.0.0/2013
+/data/maestro-v3.0.0/2014
+/data/maestro-v3.0.0/2015
+/data/maestro-v3.0.0/2017
+/data/maestro-v3.0.0/2018
 /py
 /maestro-v3.0.0.json
 /test.py
