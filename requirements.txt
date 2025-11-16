@@ -6,3 +6,6 @@ tensorflow
 keras
 seaborn
 matplotlib
+argparse
+pathlib
+typing
