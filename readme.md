@@ -41,12 +41,13 @@ See bibliography for dataset information.
 
 *Sequentially numbered steps that cover the production of the prototype from beginning to end. The steps should be detailed enough for someone else to be able to replicate from your directions.*
 
-1. **Preprocessing** - In this stage, the data will be processed to remove unwanted data, and be put into a format most useful for the purposes of this project.
-    The dataset chosen for this project is the **MAESTRO Dataset**. It consists of WAV audio and MIDI files gathered during the International Piano e-Competition, in which virtuoso pianists play on contest-quality Yamaha Disklaviers that automatically transcribe the notes being played and can wire the performance to another Disklavier or to a computer file. Included with the audio and MIDI files is data about the pedal positions and striking velocity on each key of the piano for each time frame. The most updated version of the dataset contains 1276 performances from 60 classical composers, nearly 200 hours of audio. The full metadata for the dataset can be found here.
+I. **Preprocessing** - In this stage, the data will be processed to remove unwanted data, and be put into a format most useful for the purposes of this project.
 
-    The MAESTRO Dataset is enormous, and not all of it will be used in this project. First, only the composers with a significant number of works will be included in this study. All the data from those composers represented by fewer than 25 works in the dataset will be removed, including all the works with attributions to more than one composer. A full list of composers in the dataset by number of works can be found here.
+1. The dataset chosen for this project is the **MAESTRO Dataset**. It consists of WAV audio and MIDI files gathered during the International Piano e-Competition, in which virtuoso pianists play on contest-quality Yamaha Disklaviers that automatically transcribe the notes being played and can wire the performance to another Disklavier or to a computer file. Included with the audio and MIDI files is data about the pedal positions and striking velocity on each key of the piano for each time frame. The most updated version of the dataset contains 1276 performances from 60 classical composers, nearly 200 hours of audio. The full metadata for the dataset can be found here.
 
-    The 14 composers with more than 25 works in the MAESTRO Dataset, ordered by number of works:
+2. The MAESTRO Dataset is enormous, and not all of it will be used in this project. First, only the composers with a significant number of works will be included in this study. All the data from those composers represented by fewer than 25 works in the dataset will be removed, including all the works with attributions to more than one composer. A full list of composers in the dataset by number of works can be found here.
+
+3. The 14 composers with more than 25 works in the MAESTRO Dataset, ordered by number of works:
 
 | **Composer** | **Number of Works in Dataset** |
 |----------|-------|
@@ -65,49 +66,55 @@ See bibliography for dataset information.
 | Felix Mendelssohn | 28 |
 | Johannes Brahms | 26 |
 
-    To aid efficiency in the model, a master JSON file will be created with information about each of the 14 above composers, including their name, the number of works represented in the dataset, and the era they composed in (i.e. Baroque, Classical, or Romantic). Beethoven is the only composer who is tricky to classify, as his early music is clearly Classical, and his later music marked the start of the Romantic period.
+4. To aid efficiency in the model, a master JSON file will be created with information about each of the 14 above composers, including their name, the number of works represented in the dataset, and the era they composed in (i.e. Baroque, Classical, or Romantic). Beethoven is the only composer who is tricky to classify, as his early music is clearly Classical, and his later music marked the start of the Romantic period.
 
-    To standardize the length of each piece to 60 s, the following procedure will be used (George and Shamir; Costa et at.):
+5. To standardize the length of each piece to 60 s, the following procedure will be used (George and Shamir; Costa et at.):
 
-    For pieces with a runtime of greater than 90 s, the interval used will be [30 s, 90 s].
+- For pieces with a runtime of greater than 90 s, the interval used will be [30 s, 90 s].
+- For pieces with a runtime between 60 s and 90 s, the endpoints will be the midpoint of the audio file plus or minus 30 s.
+- Pieces with a runtime shorter than 60 s will be cut from the dataset.
 
-    or pieces with a runtime between 60 s and 90 s, the endpoints will be the midpoint of the audio file plus or minus 30 s.
+II. **Feature Selection** - This is the most important part of the process, and ultimately determines the accuracy of the model. This is also the step that largely differentiates this project from previous ones. For these reasons, this stage will also see the most modification as the experimentation progresses.
 
-    Pieces with a runtime shorter than 60 s will be cut from the dataset.
-2. **Feature Selection** - This is the most important part of the process, and ultimately determines the accuracy of the model. This is also the step that largely differentiates this project from previous ones. For these reasons, this stage will also see the most modification as the experimentation progresses.
-    The most influential feature will be the **spectrogram**, the result of a short time Fourier transform taken on the audio file. Initially, 23 ms windows will be used with 50% overlap and a Hann window function, but these parameters may be changed throughout the course of experimentation depending on performance.
+1. The most influential feature will be the **spectrogram**, the result of a short time Fourier transform taken on the audio file. Initially, 23 ms windows will be used with 50% overlap and a Hann window function, but these parameters may be changed throughout the course of experimentation depending on performance.
 
-    The Python library **pretty_midi** will be used to extract features from the MIDI files also present in the dataset alongside the WAV recordings. pretty_midi can be used to extract such things as tempi, time signature, key, and note duration (by subtracting initial time from final time).
+2. The Python library **pretty_midi** will be used to extract features from the MIDI files also present in the dataset alongside the WAV recordings. pretty_midi can be used to extract such things as tempi, time signature, key, and note duration (by subtracting initial time from final time).
 
-    The **librosa** Python library contains a number of helpful functions for extracting features from audio signals:
+3. The **librosa** Python library contains a number of helpful functions for extracting features from audio signals:
 
-    From the computed STFT, a set of **Mel-frequency cepstral coefficients (MFCC)** — a way of extracting data from an audio signal that correlates well with the human perception of sound — will be found. An MFCC takes the shape of a 39-dimensional vector. It will be calculated using the librosa.feature.mfcc().
+4. From the computed STFT, a set of **Mel-frequency cepstral coefficients (MFCC)** — a way of extracting data from an audio signal that correlates well with the human perception of sound — will be found. An MFCC takes the shape of a 39-dimensional vector. It will be calculated using the librosa.feature.mfcc().
 
-    The **Harmonic Pitch Class Profile (HPCP)** — also known simply as the chroma — provides a visualization of the distribution of energy across the twelve pitch classes for an audio signal, encoding the harmonic content of the signal.
-3. **Model Architecture** - The following types of machine learning models will likely be used in some capacity, though the exact parameters will almost certainly be tweaked.
-    **Convolutional Neural Network (CNN)** - Commonly used in image processing and computer vision. Centers around a mathematical operation called a convolution, essentially a small square set of pixels, each with a distinct weight, that, when passed over the original image, captures some piece of information about that image, like edges or dark spots. The machine learning model optimizes these squares of pixels, called kernels. CNNs will likely be used to process the Fourier or mel spectrograms and interpret the audio signal.
+5. The **Harmonic Pitch Class Profile (HPCP)** — also known simply as the chroma — provides a visualization of the distribution of energy across the twelve pitch classes for an audio signal, encoding the harmonic content of the signal.
 
-    **Bidirectional Long Short-Term Memory (BiLSTM)** - An LSTM is a type of recursive neural network in which the model has a sort of “memory” of previous cases that it can “forget” if they turn out to be irrelevant. The bidirectional part means that there are two LSTMs moving through the dataset in opposite directions that can interact with one another. The BiLSTM is what will add a temporal dimension to the model. At each timestep, the Fourier transform will be taken or MFCCs will be calculated, and those results will be fed into the BiLSTM, which can use data from previous timesteps to find trends in the signal.
+III. **Model Architecture** - The following types of machine learning models will likely be used in some capacity, though the exact parameters will almost certainly be tweaked.
 
-    **Dense Layer** - A simple neural network where each input directly corresponds to one output. Essentially a trainable linear transformation on the input data. Dense layers will be used to normalize initial and final data, as well as between different types of layers.
+1. **Convolutional Neural Network (CNN)** - Commonly used in image processing and computer vision. Centers around a mathematical operation called a convolution, essentially a small square set of pixels, each with a distinct weight, that, when passed over the original image, captures some piece of information about that image, like edges or dark spots. The machine learning model optimizes these squares of pixels, called kernels. CNNs will likely be used to process the Fourier or mel spectrograms and interpret the audio signal.
 
-    **Deep Neural Network (DNN)** - Neural network with more than two hidden layers. Often yields state-of-the-art results, but has a tendency to overfit to the data. A DNN will be used to optimize the final model.
-4. **Methodology** - Four separate trials of increasing difficulty will be performed to optimize the code being used as the project progresses:
-    **Trial 1 - Period Classification.** The model will attempt to classify works by period, either baroque, classical, or romantic. This should be relatively straightforward for the model because the differences between each period are so stark and there are so many works present from each period. This stage will also establish a performance baseline and begin to distinguish between broad stylistic features.
+2. **Bidirectional Long Short-Term Memory (BiLSTM)** - An LSTM is a type of recursive neural network in which the model has a sort of “memory” of previous cases that it can “forget” if they turn out to be irrelevant. The bidirectional part means that there are two LSTMs moving through the dataset in opposite directions that can interact with one another. The BiLSTM is what will add a temporal dimension to the model. At each timestep, the Fourier transform will be taken or MFCCs will be calculated, and those results will be fed into the BiLSTM, which can use data from previous timesteps to find trends in the signal.
 
-    **Trial 2 - Contrasting Composers.** Next, a distinction will be made between the composers. Instead of using the entire subset of 14 composers, however, two composers with a large number of works included from different periods (e.g. Bach and Chopin) will be used to further improve the model. This should also be fairly trivial.
+3. **Dense Layer** - A simple neural network where each input directly corresponds to one output. Essentially a trainable linear transformation on the input data. Dense layers will be used to normalize initial and final data, as well as between different types of layers.
 
-    **Trial 3 - Similar Composers.** To further improve the model, the next trial will be to differentiate between two composers of the same period, which are therefore much more similar than two composers of different periods. Chopin and Schubert will be used because they have large numbers of works and are both from the Romantic period.
+4. **Deep Neural Network (DNN)** - Neural network with more than two hidden layers. Often yields state-of-the-art results, but has a tendency to overfit to the data. A DNN will be used to optimize the final model.
 
-    **Trial 4 - Full Subset of MAESTRO.** Finally comes the final objective: classify each work in the subset of the MAESTRO Dataset as coming from one of these 14 composers. This is difficult not only because of the similarities between the works of many of these composers, but also because of the small amount of works some of the composers toward the end of the list have. For this reason, the goal may be modified, depending on how well the model performs.
+IV. **Methodology** - Four separate trials of increasing difficulty will be performed to optimize the code being used as the project progresses:
 
-    As seen in the list of composers above, there is a precipitous drop off in the number of works between Liszt and Rachmaninoff. Therefore, this phase will be broken into two steps in practice, first using the 5 composers with more than 100 works (in italics), then phasing in the rest.
-5. **Performance Evaluation**
-    A confusion matrix is a data visualization tool that will be employed to find the most confused composers. The rows of the chart are the actual classification of each composer, and the columns the predicted classification. The correctly classified cases run diagonally down the center of the chart, and high values outside that diagonal indicate that the composer in the given row was often misclassified as the composer in the given column, calling for a change in features or model architecture.
+1. **Period Classification.** The model will attempt to classify works by period, either baroque, classical, or romantic. This should be relatively straightforward for the model because the differences between each period are so stark and there are so many works present from each period. This stage will also establish a performance baseline and begin to distinguish between broad stylistic features.
 
-    To ensure the model does not overfit to the data, k-fold cross validation will be implemented in addition to the testing subset of the data.
+2. **Contrasting Composers.** Next, a distinction will be made between the composers. Instead of using the entire subset of 14 composers, however, two composers with a large number of works included from different periods (e.g. Bach and Chopin) will be used to further improve the model. This should also be fairly trivial.
 
-    The design criteria below will also be used to evaluate the performance of the model.
+3. **Similar Composers.** To further improve the model, the next trial will be to differentiate between two composers of the same period, which are therefore much more similar than two composers of different periods. Chopin and Schubert will be used because they have large numbers of works and are both from the Romantic period.
+
+4. **Full Subset of MAESTRO.** Finally comes the final objective: classify each work in the subset of the MAESTRO Dataset as coming from one of these 14 composers. This is difficult not only because of the similarities between the works of many of these composers, but also because of the small amount of works some of the composers toward the end of the list have. For this reason, the goal may be modified, depending on how well the model performs.
+
+- As seen in the list of composers above, there is a precipitous drop off in the number of works between Liszt and Rachmaninoff. Therefore, this phase will be broken into two steps in practice, first using the 5 composers with more than 100 works (in italics), then phasing in the rest.
+
+V. **Performance Evaluation**
+
+1. A **confusion matrix** is a data visualization tool that will be employed to find the most confused composers. The rows of the chart are the actual classification of each composer, and the columns the predicted classification. The correctly classified cases run diagonally down the center of the chart, and high values outside that diagonal indicate that the composer in the given row was often misclassified as the composer in the given column, calling for a change in features or model architecture.
+
+2. To ensure the model does not overfit to the data, **k-fold cross validation** will be implemented in addition to the testing subset of the data.
+
+3. The design criteria below will also be used to evaluate the performance of the model.
 
 ### Prototype Testing
 
