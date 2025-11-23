@@ -1,0 +1,131 @@
+# Algorithmic Classification of Classical Piano Music by Composer
+
+## Rationale (Problem)
+
+A few sentences to summarize your background research that supports your research problem and the need for a solution.
+(Prompts: Why is this problem worth solving? Is there a global or societal need for this prototype/product?)
+
+This project combines techniques from music theory, physics, mathematics, and computer science to analyze works of classical music and ultimately classify them by composer. Published in 2018 by Hawthorne et al., the MAESTRO Dataset — MIDI and Audio Edited for Synchronous TRacks and Organization — provided the data for this project, and contains both MIDI transcriptions and WAV audio files of virtuosic piano music. The mathematical analysis of the audio involved the Fourier transform, a method of decomposing a complex signal into its component sine waves, thus revealing the most influential frequencies in the sound of the signal and their amplitudes. These data, along with other techniques of analyzing the symbolic and audio files, will be used to train a machine learning model that can be used to determine the composer of works it has not seen before. Most of the research in this field centers around classification by genre (e.g. classical vs. pop) or emotion rather than the identity of the composer.
+
+## Engineering Goal
+
+What is the prototype or product that you hope to develop and the expected outcome(s) from it?
+(Prompt: What are the design criteria and constraints for your project?)
+The goal of this project is to create a machine learning model that can successfully classify works of classical music by composer. As detailed in the “Prototype Testing” section of this plan, each of the progressively more difficult classification tasks (outlined in §III of “Design and Construction”) must receive accuracy, precision, recall, and F1 scores of above 0.7 before moving on to the next model. For the last model, which aims to classify the 14 composers with the most works represented in the MAESTRO Dataset, these four performance metrics will be optimized to achieve an F1 score approaching or exceeding 0.9, consistent with state-of-the-art results in related tasks. If this turns out trivial using both the recording and MIDI transcription, a final attempt will be made at classifying the 14 composers using just the WAV audio. A secondary goal of this project is to make the models used easily scalable to add more composers and works. This involves qualitative analysis of the code and how easy it is to add more composers to the system as experimentation progresses. If successful, this system could support automated musicological analysis, recommendation systems, or digital music archiving.
+
+## Prototype Development
+
+Review page 12-14 of the MSEF manual to see if there are specific guidelines, safety, or forms related to the materials you are using or the equipment you are using.
+If you determine that anything you are planning is listed as “requires pre-approval”, you will be prompted to complete an electronic version of the form below. If you have completed this template, most of the required information will be ready for you to copy and paste when you create your project in zFairs!
+Risk Assessment Form 3 (preview-only)
+
+This portion can be subdivided into the sections below:
+
+### Safety
+
+These steps will vary according to the types of projects.  Identify any potential risks and how they are addressed/minimized in your methods.  Refer to all safety equipment used, including, but not limited to, goggles, gloves, closed toe shoes, working conditions (fume hood, fire extinguisher if combustion is possible) and supervision.
+N/A
+
+### Materials & Equipment
+
+Include, in list format specific names and concentrations of chemicals, equipment used, locations, how materials are obtained, etc.
+See bibliography for dataset information.
+
+### Design & Construction
+
+Sequentially numbered steps that cover the production of the prototype from beginning to end. The steps should be detailed enough for someone else to be able to replicate from your directions.
+Preprocessing - In this stage, the data will be processed to remove unwanted data, and be put into a format most useful for the purposes of this project.
+The dataset chosen for this project is the MAESTRO Dataset. It consists of WAV audio and MIDI files gathered during the International Piano e-Competition, in which virtuoso pianists play on contest-quality Yamaha Disklaviers that automatically transcribe the notes being played and can wire the performance to another Disklavier or to a computer file. Included with the audio and MIDI files is data about the pedal positions and striking velocity on each key of the piano for each time frame. The most updated version of the dataset contains 1276 performances from 60 classical composers, nearly 200 hours of audio. The full metadata for the dataset can be found here.
+The MAESTRO Dataset is enormous, and not all of it will be used in this project. First, only the composers with a significant number of works will be included in this study. All the data from those composers represented by fewer than 25 works in the dataset will be removed, including all the works with attributions to more than one composer. A full list of composers in the dataset by number of works can be found here.
+The 14 composers with more than 25 works in the MAESTRO Dataset, ordered by number of works (in parentheses):
+
+| Composer | Count |
+|----------|-------|
+| Frédéric Chopin | 201 |
+| Franz Schubert | 186 |
+| Ludwig van Beethoven | 146 |
+| Johann Sebastian Bach | 145 |
+| Franz Liszt | 131 |
+| Sergei Rachmaninoff | 59 |
+| Robert Schumann | 49 |
+| Claude Debussy | 45 |
+| Joseph Haydn | 40 |
+| Wolfgang Amadeus Mozart | 38 |
+| Alexander Scriabin | 35 |
+| Domenico Scarlatti | 31 |
+| Felix Mendelssohn | 28 |
+| Johannes Brahms | 26 |
+
+To aid efficiency in the model, a master JSON file will be created with information about each of the 14 above composers, including their name, the number of works represented in the dataset, and the era they composed in (i.e. Baroque, Classical, or Romantic). Beethoven is the only composer who is tricky to classify, as his early music is clearly Classical, and his later music marked the start of the Romantic period.
+To standardize the length of each piece to 60 s, the following procedure will be used (George and Shamir; Costa et at.):
+For pieces with a runtime of greater than 90 s, the interval used will be [30 s, 90 s].
+For pieces with a runtime between 60 s and 90 s, the endpoints will be the midpoint of the audio file plus or minus 30 s.
+Pieces with a runtime shorter than 60 s will be cut from the dataset.
+Feature Selection - This is the most important part of the process, and ultimately determines the accuracy of the model. This is also the step that largely differentiates this project from previous ones. For these reasons, this stage will also see the most modification as the experimentation progresses.
+The most influential feature will be the spectrogram, the result of a short time Fourier transform taken on the audio file. Initially, 23 ms windows will be used with 50% overlap and a Hann window function, but these parameters may be changed throughout the course of experimentation depending on performance.
+The Python library pretty_midi will be used to extract features from the MIDI files also present in the dataset alongside the WAV recordings. pretty_midi can be used to extract such things as tempi, time signature, key, and note duration (by subtracting initial time from final time).
+The librosa Python library contains a number of helpful functions for extracting features from audio signals:
+From the computed STFT, a set of Mel-frequency cepstral coefficients (MFCC) — a way of extracting data from an audio signal that correlates well with the human perception of sound — will be found. An MFCC takes the shape of a 39-dimensional vector. It will be calculated using the librosa.feature.mfcc().
+The Harmonic Pitch Class Profile (HPCP) — also known simply as the chroma — provides a visualization of the distribution of energy across the twelve pitch classes for an audio signal, encoding the harmonic content of the signal.
+Model Architecture - The following types of machine learning models will likely be used in some capacity, though the exact parameters will almost certainly be tweaked.
+Convolutional Neural Network (CNN) - Commonly used in image processing and computer vision. Centers around a mathematical operation called a convolution, essentially a small square set of pixels, each with a distinct weight, that, when passed over the original image, captures some piece of information about that image, like edges or dark spots. The machine learning model optimizes these squares of pixels, called kernels. CNNs will likely be used to process the Fourier or mel spectrograms and interpret the audio signal.
+Bidirectional Long Short-Term Memory (BiLSTM) - An LSTM is a type of recursive neural network in which the model has a sort of “memory” of previous cases that it can “forget” if they turn out to be irrelevant. The bidirectional part means that there are two LSTMs moving through the dataset in opposite directions that can interact with one another. The BiLSTM is what will add a temporal dimension to the model. At each timestep, the Fourier transform will be taken or MFCCs will be calculated, and those results will be fed into the BiLSTM, which can use data from previous timesteps to find trends in the signal.
+Dense Layer - A simple neural network where each input directly corresponds to one output. Essentially a trainable linear transformation on the input data. Dense layers will be used to normalize initial and final data, as well as between different types of layers.
+Deep Neural Network (DNN) - Neural network with more than two hidden layers. Often yields state-of-the-art results, but has a tendency to overfit to the data. A DNN will be used to optimize the final model.
+Methodology - Four separate trials of increasing difficulty will be performed to optimize the code being used as the project progresses:
+Trial 1 - Period Classification. The model will attempt to classify works by period, either baroque, classical, or romantic. This should be relatively straightforward for the model because the differences between each period are so stark and there are so many works present from each period. This stage will also establish a performance baseline and begin to distinguish between broad stylistic features.
+Trial 2 - Contrasting Composers. Next, a distinction will be made between the composers. Instead of using the entire subset of 14 composers, however, two composers with a large number of works included from different periods (e.g. Bach and Chopin) will be used to further improve the model. This should also be fairly trivial.
+Trial 3 - Similar Composers. To further improve the model, the next trial will be to differentiate between two composers of the same period, which are therefore much more similar than two composers of different periods. Chopin and Schubert will be used because they have large numbers of works and are both from the Romantic period.
+Trial 4 - Full Subset of MAESTRO. Finally comes the final objective: classify each work in the subset of the MAESTRO Dataset as coming from one of these 14 composers. This is difficult not only because of the similarities between the works of many of these composers, but also because of the small amount of works some of the composers toward the end of the list have. For this reason, the goal may be modified, depending on how well the model performs.
+As seen in the list of composers above, there is a precipitous drop off in the number of works between Liszt and Rachmaninoff. Therefore, this phase will be broken into two steps in practice, first using the 5 composers with more than 100 works (in italics), then phasing in the rest.
+Performance Evaluation
+A confusion matrix is a data visualization tool that will be employed to find the most confused composers. The rows of the chart are the actual classification of each composer, and the columns the predicted classification. The correctly classified cases run diagonally down the center of the chart, and high values outside that diagonal indicate that the composer in the given row was often misclassified as the composer in the given column, calling for a change in features or model architecture.
+To ensure the model does not overfit to the data, k-fold cross validation will be implemented in addition to the testing subset of the data.
+The design criteria below will also be used to evaluate the performance of the model.
+
+### Prototype Testing
+
+Describe the steps and measurements involved in the testing of the prototype.  Include a description of the design criteria that will be employed to analyze and discuss the results of the prototype testing.
+Design Criteria:
+Performance - Each of the following metrics help to determine how well the model classified the data. A score of at least 0.7 will be achieved for each of the phases of the above methodology before moving on.
+
+- Accuracy is simply the percentage of items that were classified correctly by the model.
+- Precision measures the fraction of positive predictions that are correct. High precision models avoid false positives (i.e. identifying one composer’s work as belonging to another).
+- Recall measures the ability of a model to find relevant cases (i.e. positives). High recall models avoid false negatives (i.e. misclassifying the works of one specific composer).
+- The F1 score (also F-score or F-measure) is a measure of predictive performance for a machine learning model between 0 and 1. It is the harmonic mean of precision — the number of retrieved items that are relevant — and the recall — the number of relevant items retrieved. $F_1=\frac{2TP}{2TP+FP+FN}$, where TP is true positive, FP false positives, and FN false negatives. The F1 score is a more accurate metric of performance than accuracy when one class is more common than another.
+
+Scalability
+One key quality of the model that will be assessed is how easily more composers can be added to the dataset. This will be assessed qualitatively when the number of composers is increased from 5 to 14.
+
+### Clean-up and Disposal
+
+N/A
+
+## Bibliography
+
+Key sources on your topic, from your literature review and/or background research, that helped you write this plan.  APA format is recommended.
+Dataset:
+Hawthorne, Curtis, et al. “Enabling Factorized Piano Music Modeling and Generation with the MAESTRO Dataset.” International Conference on Learning Representations, 2018. arXiv, <https://arxiv.org/pdf/1810.12247>. Accessed 13 October 2025.
+Downloaded using Google Magenta.
+
+### Key Sources
+
+Chani, Hadhrami Ab, et al. “A review on sparse Fast Fourier Transform applications in image processing.” International Journal of Electrical and Computer Engineering (IJECE), 2020. Institute of Advanced Engineering and Science (IAES), <https://ijece.iaescore.com/index.php/IJECE/article/view/20038>. Accessed 26 September 2025.
+Cooley, James W., and John Tuckey. “An algorithm for the machine calculation of complex Fourier series.” Mathematics of Computation, vol. 19, no. 90, 1965, pp. 297-301. American Mathematical Society, <https://www.ams.org/journals/mcom/1965-19-090/S0025-5718-1965-0178586-1/S0025-5718-1965-0178586-1.pdf>. Accessed 8 September 2025.
+Deepaisarn, Somrudee, et al. “NLP-based music processing for composer classification.” Scientific Reports, vol. 13, no. 13228, 2023. <https://doi.org/10.1038/s41598-023-40332-0>. Accessed 13 October 2025.
+Fletcher, Neville H., and Thomas D. Rossing. The Physics of Musical Instruments. 2nd ed., New York, Springer-Verlag, Inc., 1998.
+Lenssen, Nathan, and Deanna Needell. “An Introduction to Fourier Analysis with Applications to Music.” Journal of Humanistic Mathematics, vol. 4, no. 1, 2014, pp. 72-91. The Claremont Colleges, <https://scholarship.claremont.edu/cgi/viewcontent.cgi?article=1142&context=jhm>. Accessed 8 September 2025.
+
+### Python Libraries (in addition to Python Standard Libraries)
+
+Abadi, Martín, et al. TensorFlow: Large-Scale Machine Learning on Heterogeneous Systems. Version 2.18, Google Research, 2015–2025, <https://www.tensorflow.org/>.
+Chollet, François, et al. Keras: The Python Deep Learning Library. Version 3.3, Keras.io, 2015–2025, <https://keras.io/>.
+Harris, Charles R., et al. NumPy: Fundamental Algorithms for Scientific Computing in Python. Version 2.1, NumPy Developers, 2025, <https://numpy.org/>.
+Hunter, John D., et al. Matplotlib: Visualization with Python. Version 3.9, matplotlib.org, 2025, <https://matplotlib.org/>.
+McFee, Brian, et al. librosa: Audio and Music Signal Analysis in Python. Version 0.10, librosa.org, 2025, <https://librosa.org/>.
+Raffel, Colin, and Daniel P. W. Ellis. pretty_midi: Tools and Data Structures for MIDI Processing in Python. Version 0.2, Columbia University, 2014, <https://github.com/craffel/pretty-midi>.
+
+## Summary or Addendum
+
+This section is only necessary if experimentation changed through the course of the research
+If additional SRC or IRB approval was needed, you must also provide a letter from the SRC, explaining the changes, which is then signed and dated.
