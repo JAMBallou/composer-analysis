@@ -1,20 +1,20 @@
 # Algorithmic Classification of Classical Piano Music by Composer
 
-The following has been taken from my proposed research plan applying to the Massachusetts Science and Engineering Fair (MSEF).
+The following has been taken from my proposed research plan applying to the [Massachusetts Science and Engineering Fair (MSEF)](https://scifair.com/).
 
 ## Rationale (Problem)
 
 *A few sentences to summarize your background research that supports your research problem and the need for a solution.*
 *(Prompts: Why is this problem worth solving? Is there a global or societal need for this prototype/product?)*
 
-This project combines techniques from music theory, physics, mathematics, and computer science to analyze works of classical music and ultimately classify them by composer. Published in 2018 by Hawthorne et al., the MAESTRO Dataset — MIDI and Audio Edited for Synchronous TRacks and Organization — provided the data for this project, and contains both MIDI transcriptions and WAV audio files of virtuosic piano music. The mathematical analysis of the audio involved the Fourier transform, a method of decomposing a complex signal into its component sine waves, thus revealing the most influential frequencies in the sound of the signal and their amplitudes. These data, along with other techniques of analyzing the symbolic and audio files, will be used to train a machine learning model that can be used to determine the composer of works it has not seen before. Most of the research in this field centers around classification by genre (e.g. classical vs. pop) or emotion rather than the identity of the composer.
+This project combines techniques from music theory, physics, mathematics, and computer science to analyze works of classical music and ultimately classify them by composer. [Published in 2018 by Hawthorne et al.](https://arxiv.org/pdf/1810.12247), [the MAESTRO Dataset](https://magenta.withgoogle.com/datasets/maestro#dataset) — MIDI and Audio Edited for Synchronous TRacks and Organization — provided the data for this project, and contains both MIDI transcriptions and WAV audio files of virtuosic piano music. The mathematical analysis of the audio involved the Fourier transform, a method of decomposing a complex signal into its component sine waves, thus revealing the most influential frequencies in the sound of the signal and their amplitudes. These data, along with other techniques of analyzing the symbolic and audio files, will be used to train a machine learning model that can be used to determine the composer of works it has not seen before. Most of the research in this field centers around classification by genre (e.g. classical vs. pop) or by emotion rather than the identity of the composer.
 
 ## Engineering Goal
 
 *What is the prototype or product that you hope to develop and the expected outcome(s) from it?*
 *(Prompt: What are the design criteria and constraints for your project?)*
 
-The goal of this project is to create a machine learning model that can successfully classify works of classical music by composer. As detailed in the “Prototype Testing” section of this plan, each of the progressively more difficult classification tasks (outlined in §III of “Design and Construction”) must receive accuracy, precision, recall, and F1 scores of above 0.7 before moving on to the next model. For the last model, which aims to classify the 14 composers with the most works represented in the MAESTRO Dataset, these four performance metrics will be optimized to achieve an F1 score approaching or exceeding 0.9, consistent with state-of-the-art results in related tasks. If this turns out trivial using both the recording and MIDI transcription, a final attempt will be made at classifying the 14 composers using just the WAV audio. A secondary goal of this project is to make the models used easily scalable to add more composers and works. This involves qualitative analysis of the code and how easy it is to add more composers to the system as experimentation progresses. If successful, this system could support automated musicological analysis, recommendation systems, or digital music archiving.
+The goal of this project is to create a machine learning model that can successfully classify works of classical music by composer. As detailed in the [Prototype Testing](#prototype-testing) section, each of the progressively more difficult classification tasks (outlined in §III of [Design & Construction](#design--construction)) must receive accuracy, precision, recall, and F1 scores of above 0.7 before moving on to the next model. For the last model, which aims to classify the 14 composers with the most works represented in the MAESTRO Dataset, these four performance metrics will be optimized to achieve an F1 score approaching or exceeding 0.9, consistent with state-of-the-art results in related tasks. If this turns out trivial using both the recording and MIDI transcription, a final attempt will be made at classifying the 14 composers using just the WAV audio. A secondary goal of this project is to make the models used easily scalable to add more composers and works. This involves qualitative analysis of the code and how easy it is to add more composers to the system as experimentation progresses. If successful, this system could support automated musicological analysis, recommendation systems, or digital music archiving.
 
 ## Prototype Development
 
@@ -35,7 +35,7 @@ N/A
 
 *Include, in list format specific names and concentrations of chemicals, equipment used, locations, how materials are obtained, etc.*
 
-See bibliography for dataset information.
+See [bibliography](#bibliography) for dataset information.
 
 ### Design & Construction
 
@@ -43,9 +43,9 @@ See bibliography for dataset information.
 
 I. **Preprocessing** - In this stage, the data will be processed to remove unwanted data, and be put into a format most useful for the purposes of this project.
 
-1. The dataset chosen for this project is the **MAESTRO Dataset**. It consists of WAV audio and MIDI files gathered during the International Piano e-Competition, in which virtuoso pianists play on contest-quality Yamaha Disklaviers that automatically transcribe the notes being played and can wire the performance to another Disklavier or to a computer file. Included with the audio and MIDI files is data about the pedal positions and striking velocity on each key of the piano for each time frame. The most updated version of the dataset contains 1276 performances from 60 classical composers, nearly 200 hours of audio. The full metadata for the dataset can be found here.
+1. The dataset chosen for this project is the **MAESTRO Dataset**. It consists of WAV audio and MIDI files gathered during the International Piano e-Competition, in which virtuoso pianists play on contest-quality Yamaha Disklaviers that automatically transcribe the notes being played and can wire the performance to another Disklavier or to a computer file. Included with the audio and MIDI files is data about the pedal positions and striking velocity on each key of the piano for each time frame. The most updated version of the dataset contains 1276 performances from 60 classical composers, nearly 200 hours of audio. [The full metadata for the dataset can be found here](https://github.com/JAMBallou/composer-analysis/blob/main/data/maestro/maestro-v3.0.0.csv).
 
-2. The MAESTRO Dataset is enormous, and not all of it will be used in this project. First, only the composers with a significant number of works will be included in this study. All the data from those composers represented by fewer than 25 works in the dataset will be removed, including all the works with attributions to more than one composer. A full list of composers in the dataset by number of works can be found here.
+2. The MAESTRO Dataset is enormous, and not all of it will be used in this project. First, only the composers with a significant number of works will be included in this study. All the data from those composers represented by fewer than 25 works in the dataset will be removed, including all the works with attributions to more than one composer. [A full list of composers in the dataset by number of works can be found here](https://github.com/JAMBallou/composer-analysis/blob/main/data/maestro/composer_count.csv).
 
 3. The 14 composers with more than 25 works in the MAESTRO Dataset, ordered by number of works:
 
@@ -68,7 +68,7 @@ I. **Preprocessing** - In this stage, the data will be processed to remove unwan
 
 4. To aid efficiency in the model, a master JSON file will be created with information about each of the 14 above composers, including their name, the number of works represented in the dataset, and the era they composed in (i.e. Baroque, Classical, or Romantic). Beethoven is the only composer who is tricky to classify, as his early music is clearly Classical, and his later music marked the start of the Romantic period.
 
-5. To standardize the length of each piece to 60 s, the following procedure will be used (George and Shamir; Costa et at.):
+5. To standardize the length of each piece to 60 s, the following procedure will be used (adapted from [Costa et al.](https://www.researchgate.net/publication/311650413_An_Evaluation_of_Convolutional_Neural_Networks_for_Music_Classification_Using_Spectrograms)):
 
 - For pieces with a runtime of greater than 90 s, the interval used will be [30 s, 90 s].
 - For pieces with a runtime between 60 s and 90 s, the endpoints will be the midpoint of the audio file plus or minus 30 s.
@@ -82,7 +82,7 @@ II. **Feature Selection** - This is the most important part of the process, and 
 
 3. The **librosa** Python library contains a number of helpful functions for extracting features from audio signals:
 
-4. From the computed STFT, a set of **Mel-frequency cepstral coefficients (MFCC)** — a way of extracting data from an audio signal that correlates well with the human perception of sound — will be found. An MFCC takes the shape of a 39-dimensional vector. It will be calculated using the librosa.feature.mfcc().
+4. From the computed STFT, a set of **Mel-frequency cepstral coefficients (MFCC)** — a way of extracting data from an audio signal that correlates well with the human perception of sound — will be found. An MFCC takes the shape of a 39-dimensional vector. It will be calculated using  `librosa.feature.mfcc()`.
 
 5. The **Harmonic Pitch Class Profile (HPCP)** — also known simply as the chroma — provides a visualization of the distribution of energy across the twelve pitch classes for an audio signal, encoding the harmonic content of the signal.
 
@@ -106,15 +106,15 @@ IV. **Methodology** - Four separate trials of increasing difficulty will be perf
 
 4. **Full Subset of MAESTRO.** Finally comes the final objective: classify each work in the subset of the MAESTRO Dataset as coming from one of these 14 composers. This is difficult not only because of the similarities between the works of many of these composers, but also because of the small amount of works some of the composers toward the end of the list have. For this reason, the goal may be modified, depending on how well the model performs.
 
-- As seen in the list of composers above, there is a precipitous drop off in the number of works between Liszt and Rachmaninoff. Therefore, this phase will be broken into two steps in practice, first using the 5 composers with more than 100 works (in italics), then phasing in the rest.
+- As seen in the [list of composers above](#design--construction), there is a precipitous drop off in the number of works between Liszt and Rachmaninoff. Therefore, this phase will be broken into two steps in practice, first using the 5 composers with more than 100 works (in italics), then phasing in the rest.
 
 V. **Performance Evaluation**
 
-1. A **confusion matrix** is a data visualization tool that will be employed to find the most confused composers. The rows of the chart are the actual classification of each composer, and the columns the predicted classification. The correctly classified cases run diagonally down the center of the chart, and high values outside that diagonal indicate that the composer in the given row was often misclassified as the composer in the given column, calling for a change in features or model architecture.
+1. A **confusion matrix** is a data visualization tool that will be employed to find the most confused composers (examples can be seen [here on ScienceDirect](https://www.sciencedirect.com/topics/engineering/confusion-matrix)). The rows of the chart are the actual classification of each composer, and the columns the predicted classification. The correctly classified cases run diagonally down the center of the chart, and high values outside that diagonal indicate that the composer in the given row was often misclassified as the composer in the given column, calling for a change in features or model architecture.
 
 2. To ensure the model does not overfit to the data, **k-fold cross validation** will be implemented in addition to the testing subset of the data.
 
-3. The design criteria below will also be used to evaluate the performance of the model.
+3. The [design criteria below](#prototype-testing) will also be used to evaluate the performance of the model.
 
 ### Prototype Testing
 
@@ -149,6 +149,7 @@ Downloaded using Google Magenta.
 
 - Chani, Hadhrami Ab, et al. “A review on sparse Fast Fourier Transform applications in image processing.” International Journal of Electrical and Computer Engineering (IJECE), 2020. Institute of Advanced Engineering and Science (IAES), <https://ijece.iaescore.com/index.php/IJECE/article/view/20038>. Accessed 26 September 2025.
 - Cooley, James W., and John Tuckey. “An algorithm for the machine calculation of complex Fourier series.” Mathematics of Computation, vol. 19, no. 90, 1965, pp. 297-301. American Mathematical Society, <https://www.ams.org/journals/mcom/1965-19-090/S0025-5718-1965-0178586-1/S0025-5718-1965-0178586-1.pdf>. Accessed 8 September 2025.
+- Costa, Yandre M.G., et al. “An Evaluation of Convolutional Neural Networks for Music Classification Using Spectrograms.” Applied Soft Computing, vol. 52, Mar. 2017, pp. 28–38, <https://doi.org/10.1016/j.asoc.2016.12.024>. Accessed 23 November 2025.
 - Deepaisarn, Somrudee, et al. “NLP-based music processing for composer classification.” Scientific Reports, vol. 13, no. 13228, 2023. <https://doi.org/10.1038/s41598-023-40332-0>. Accessed 13 October 2025.
 - Fletcher, Neville H., and Thomas D. Rossing. The Physics of Musical Instruments. 2nd ed., New York, Springer-Verlag, Inc., 1998.
 - Lenssen, Nathan, and Deanna Needell. “An Introduction to Fourier Analysis with Applications to Music.” Journal of Humanistic Mathematics, vol. 4, no. 1, 2014, pp. 72-91. The Claremont Colleges, <https://scholarship.claremont.edu/cgi/viewcontent.cgi?article=1142&context=jhm>. Accessed 8 September 2025.
