@@ -13,7 +13,7 @@ def load_maestro_metadata(json_path: str):
     
     Args:
         json_path (str): Path to the MAESTRO JSON metadata file. 
-            Currently: ``C:\Users\jamba\OneDrive\Documents\programming\composer-classification\data\maestro\maestro-v3.0.0.json``
+            Currently: ``C:\\Users\\jamba\\OneDrive\\Documents\\programming\\composer-classification\\data\\maestro\\maestro-v3.0.0.json``
     
     Returns:
         metadata (dict): Parsed JSON metadata as a Python dictionary.
@@ -31,7 +31,7 @@ def load_maestro_csv(csv_path: str):
     
     Args:
         csv_path (str): Path to the MAESTRO CSV metadata file.
-            Currently: ``C:\Users\jamba\OneDrive\Documents\programming\composer-classification\data\maestro\maestro-v3.0.0.csv``
+            Currently: ``C:\\Users\\jamba\\OneDrive\\Documents\\programming\\composer-classification\\data\\maestro\\maestro-v3.0.0.csv``
 
     Returns:
         df (pd.DataFrame): ``df`` containing the MAESTRO metadata.
@@ -43,4 +43,5 @@ def load_maestro_csv(csv_path: str):
 
 # Example usage
 if __name__ == "__main__":
-    print(load_maestro_metadata("data\maestro\maestro-v3.0.0.json"))   
+    d = load_maestro_metadata(r"data\maestro\maestro-v3.0.0.json")
+    print(d["canonical_composer"])

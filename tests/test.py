@@ -1,4 +1,4 @@
-import tensorflow_datasets as tfds
+import numpy as np
 
-subset = tfds.load("maestro", split="train[:5%]", as_supervised=False)
-print(subset)
+loaded_array = np.load('results/features/audio/000_aux.npy')
+print(len(loaded_array))

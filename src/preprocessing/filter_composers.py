@@ -9,6 +9,8 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Set
+import shutil
+from datetime import datetime
 
 def filter_top_composers(df: pd.DataFrame, top_n: int = 14):
     """
@@ -41,6 +43,8 @@ if __name__ == "__main__":
     parser.add_argument("--top-n", type=int, default=14, help="Keep top-N composers when filtering")
     parser.add_argument("--delete", action="store_true", help="Actually delete files. Without this flag the script does a dry-run and only reports what would be removed.")
     parser.add_argument("--yes", action="store_true", help="If set with --delete, skip confirmation prompt and proceed")
+    parser.add_argument("--update-csv", action="store_true", help="If set with --delete, remove references to deleted files from the CSV (after backup if requested)")
+    parser.add_argument("--backup-csv", action="store_true", help="When updating CSV, create a timestamped backup before writing")
     args = parser.parse_args()
 
     csv_path = Path(args.csv)
@@ -115,12 +119,53 @@ if __name__ == "__main__":
     # perform deletions
     removed = 0
     errors = 0
+    removed_paths = []
     for p in to_delete:
         try:
             p.unlink()
             removed += 1
+            # record relative path inside data/ for CSV removal
+            try:
+                rel = p.relative_to(data_tree).as_posix()
+            except Exception:
+                rel = p.name
+            removed_paths.append(rel)
         except Exception as e:
             print(f"Failed to remove {p}: {e}")
             errors += 1
-
     print(f"Deletion complete. Removed={removed}; errors={errors}")
+
+    # Optionally update CSV to remove references to deleted files
+    if args.update_csv:
+        if removed == 0:
+            print("No files removed; skipping CSV update.")
+        else:
+            # Backup CSV if requested
+            if args.backup_csv:
+                ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+                backup_path = csv_path.with_suffix(f".bak.{ts}")
+                try:
+                    shutil.copy2(csv_path, backup_path)
+                    print(f"CSV backed up to {backup_path}")
+                except Exception as e:
+                    print(f"Failed to create CSV backup: {e}")
+
+            # Normalize CSV path columns and drop rows referencing removed files
+            df_orig_len = len(df)
+
+            def _norm_series(series):
+                return series.fillna("").astype(str).map(lambda s: Path(s).as_posix().lstrip("./").lstrip("/"))
+
+            audio_norm = _norm_series(df.get("audio_filename", pd.Series([""] * len(df))))
+            midi_norm = _norm_series(df.get("midi_filename", pd.Series([""] * len(df))))
+
+            # build boolean mask: True for rows to KEEP
+            keep_mask = ~audio_norm.isin(removed_paths) & ~midi_norm.isin(removed_paths)
+            df_filtered = df[keep_mask]
+            removed_rows = df_orig_len - len(df_filtered)
+
+            try:
+                df_filtered.to_csv(csv_path, index=False)
+                print(f"CSV updated: removed {removed_rows} rows referencing deleted files.")
+            except Exception as e:
+                print(f"Failed to write updated CSV: {e}")
