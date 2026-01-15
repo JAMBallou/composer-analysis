@@ -44,7 +44,7 @@ if not METADATA_PATH.exists():
     print(f"ERROR: Metadata CSV not found: {METADATA_PATH}")
     sys.exit(1)
 
-# ---------------- HELPERS ----------------
+### HELPERS ###
 def load_60s_audio(path):
     y, sr = librosa.load(path, sr=SR)
     total_samples = int(CLIP_DURATION * SR)
@@ -60,6 +60,16 @@ def load_60s_audio(path):
     return y[start:start + total_samples]
 
 def compute_audio_features(y):
+    """
+    Audio feature file structure (xxx_mel.npy, xxx_aux.npy):
+    - Mel spectrogram (N_MELS x time frames) stored in xxx_mel.npy
+    - Auxiliary features (MFCCs, chroma, rhythm) stored in xxx_aux.npy:
+        - MFCCs: mean and std of 13 MFCCs + deltas + delta-deltas (78 values)
+        - Chroma: mean and std of 12 chroma features (24 values)
+        - Rhythm: estimated tempo; onset strength mean and std (3 values)
+        - Total auxiliary feature vector length: 105
+    """
+
     # Mel spectrogram
     mel = librosa.feature.melspectrogram(
         y=y,
@@ -69,6 +79,9 @@ def compute_audio_features(y):
         n_mels=N_MELS
     )
     mel_db = librosa.power_to_db(mel, ref=np.max).astype(np.float32)
+
+
+    ### AUXILIARY FEATURES ###
 
     # MFCCs (mean + std)
     mfcc = librosa.feature.mfcc(y=y, sr=SR, n_mfcc=13)
@@ -81,12 +94,14 @@ def compute_audio_features(y):
         mfcc_all.std(axis=1)
     ])
 
+
     # Chroma stats
     chroma = librosa.feature.chroma_cqt(y=y, sr=SR)
     chroma_stats = np.concatenate([
         chroma.mean(axis=1),
         chroma.std(axis=1)
     ])
+
 
     # Rhythm features
     tempo, _ = librosa.beat.beat_track(y=y, sr=SR)
@@ -98,14 +113,21 @@ def compute_audio_features(y):
         float(onset_env.std())
     ], dtype=np.float32)
 
-    aux_features = np.concatenate([mfcc_stats, chroma_stats, rhythm_features]).astype(np.float32)
+    
+    # Combine auxiliary features
+    aux_features = np.concatenate([
+        mfcc_stats,         # 78
+        chroma_stats,       # 24
+        rhythm_features     # 3
+    ]).astype(np.float32)
     
     return {
         "mel": mel_db,
         "aux": aux_features
     }
 
-# ---------------- MAIN ----------------
+### MAIN ###
+
 print(f"Loading metadata from: {METADATA_PATH}")
 metadata = pd.read_csv(METADATA_PATH)
 print(f"Loaded {len(metadata)} files from CSV")
