@@ -44,7 +44,9 @@ if not METADATA_PATH.exists():
     print(f"ERROR: Metadata CSV not found: {METADATA_PATH}")
     sys.exit(1)
 
-### HELPERS ###
+
+# ================== HELPERS ==================
+
 def load_60s_audio(path):
     y, sr = librosa.load(path, sr=SR)
     total_samples = int(CLIP_DURATION * SR)
@@ -80,9 +82,7 @@ def compute_audio_features(y):
     )
     mel_db = librosa.power_to_db(mel, ref=np.max).astype(np.float32)
 
-
-    ### AUXILIARY FEATURES ###
-
+    # ===== AUXILIARY FEATURES =====
     # MFCCs (mean + std)
     mfcc = librosa.feature.mfcc(y=y, sr=SR, n_mfcc=13)
     delta = librosa.feature.delta(mfcc)
@@ -94,14 +94,12 @@ def compute_audio_features(y):
         mfcc_all.std(axis=1)
     ])
 
-
     # Chroma stats
     chroma = librosa.feature.chroma_cqt(y=y, sr=SR)
     chroma_stats = np.concatenate([
         chroma.mean(axis=1),
         chroma.std(axis=1)
     ])
-
 
     # Rhythm features
     tempo, _ = librosa.beat.beat_track(y=y, sr=SR)
@@ -113,7 +111,6 @@ def compute_audio_features(y):
         float(onset_env.std())
     ], dtype=np.float32)
 
-    
     # Combine auxiliary features
     aux_features = np.concatenate([
         mfcc_stats,         # 78
@@ -126,7 +123,8 @@ def compute_audio_features(y):
         "aux": aux_features
     }
 
-### MAIN ###
+
+# ================== MAIN ==================
 
 print(f"Loading metadata from: {METADATA_PATH}")
 metadata = pd.read_csv(METADATA_PATH)

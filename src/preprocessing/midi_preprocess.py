@@ -9,7 +9,11 @@ import numpy as np
 
 def extract_midi_features(midi_path: str):
     """
-    Returns structured MIDI features (e.g., pitch, duration, velocity histograms).
+    Args:
+        midi_path (str): Path to the MIDI file.
+
+    Returns:
+        Structured MIDI features (e.g., pitch, duration, velocity histograms).
     """
     midi = pretty_midi.PrettyMIDI(midi_path)
     notes = []

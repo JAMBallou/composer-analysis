@@ -40,7 +40,6 @@ if not METADATA_PATH.exists():
     sys.exit(1)
 
 
-
 # ================== MIDI FEATURE EXTRACTION ==================
 
 def extract_notes_from_midi(midi_path):
@@ -121,6 +120,7 @@ def compute_midi_features(midi_path):
     max_time = max(note[2] for note in all_notes)
     duration = max_time if max_time > 0 else 1.0
     
+
     # ===== PC Histogram (12) =====
     pc_histogram = np.zeros(12, dtype=np.float32)
     note_durations = []
@@ -139,6 +139,7 @@ def compute_midi_features(midi_path):
     note_durations = np.array(note_durations, dtype=np.float32)
     note_pitches = np.array(note_pitches, dtype=np.float32)
     
+
     # ===== Note Stats (6) =====
     mean_duration = np.mean(note_durations) if len(note_durations) > 0 else 0.0
     std_duration = np.std(note_durations) if len(note_durations) > 0 else 0.0
@@ -170,6 +171,7 @@ def compute_midi_features(midi_path):
         float(legato_ratio)
     ], dtype=np.float32)
     
+
     # ===== Register Usage (5) =====
     mean_pitch = np.mean(note_pitches)
     std_pitch = np.std(note_pitches)
@@ -187,6 +189,7 @@ def compute_midi_features(midi_path):
         float(treble_fraction)
     ], dtype=np.float32)
     
+
     # ===== Note Density (3) =====
     mean_notes_per_second = len(all_notes) / (duration + 1e-8)
     
@@ -212,6 +215,7 @@ def compute_midi_features(midi_path):
         float(max_simultaneous)
     ], dtype=np.float32)
     
+
     # ===== Pedal Usage (3) =====
     if control_changes:
         sustain_values = [val for _, val in control_changes]
@@ -229,6 +233,7 @@ def compute_midi_features(midi_path):
         float(pedal_on_fraction),
         float(pedal_variance)
     ], dtype=np.float32)
+    
     
     # ===== Combine all features =====
     features = np.concatenate([
