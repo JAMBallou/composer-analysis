@@ -152,8 +152,8 @@ for idx, row in metadata.iterrows():
 
         feats = compute_audio_features(y)
 
-        # Save features with 3-digit zero-padded index
-        idx_str = f"{file_index:03d}"
+        # Save features with 4-digit zero-padded index
+        idx_str = f"{file_index:04d}"
         np.save(OUTPUT_DIR / f"{idx_str}_mel.npy", feats["mel"])
         np.save(OUTPUT_DIR / f"{idx_str}_aux.npy", feats["aux"])
 
