@@ -1,0 +1,89 @@
+{
+  "period": {
+    "Baroque": [
+      "Johann Sebastian Bach",
+      "Domenico Scarlatti"
+    ],
+    "Classical": [
+      "Wolfgang Amadeus Mozart",
+      "Joseph Haydn",
+      "Ludwig van Beethoven",
+      "Franz Schubert"
+    ],
+    "Romantic": [
+      "Frédéric Chopin",
+      "Franz Schubert",
+      "Franz Liszt",
+      "Sergei Rachmaninoff",
+      "Robert Schumann",
+      "Claude Debussy",
+      "Alexander Scriabin",
+      "Felix Mendelssohn",
+      "Johannes Brahms"
+    ]
+  },
+  "region": {
+    "Germanic Central Europe": [
+      "Johann Sebastian Bach",
+      "Ludwig van Beethoven",
+      "Franz Schubert",
+      "Robert Schumann",
+      "Johannes Brahms",
+      "Joseph Haydn",
+      "Wolfgang Amadeus Mozart"
+    ],
+    "Italy": [
+      "Domenico Scarlatti"
+    ],
+    "Eastern Europe & Russia": [
+      "Frédéric Chopin",
+      "Franz Liszt",
+      "Sergei Rachmaninoff",
+      "Alexander Scriabin"
+    ],
+    "France": [
+      "Claude Debussy"
+    ]
+  },
+  "birthplace": {
+    "Eisenach, Germany": [
+      "Johann Sebastian Bach"
+    ],
+    "Naples, Italy": [
+      "Domenico Scarlatti"
+    ],
+    "Rohrau, Austria": [
+      "Joseph Haydn"
+    ],
+    "Salzburg, Austria": [
+      "Wolfgang Amadeus Mozart"
+    ],
+    "Bonn, Germany": [
+      "Ludwig van Beethoven"
+    ],
+    "Vienna, Austria": [
+      "Franz Schubert"
+    ],
+    "Zwickau, Germany": [
+      "Robert Schumann"
+    ],
+    "Hamburg, Germany": [
+      "Johannes Brahms"
+    ],
+    "Żelazowa Wola, Poland": [
+      "Frédéric Chopin"
+    ],
+    "Raiding, Hungary": [
+      "Franz Liszt"
+    ],
+    "Semyonovo, Russia": [
+      "Sergei Rachmaninoff"
+    ],
+    "Moscow, Russia": [
+      "Alexander Scriabin"
+    ],
+    "Saint-Germain-en-Laye, France": [
+      "Claude Debussy"
+    ]
+  }
+}
