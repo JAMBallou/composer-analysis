@@ -70,6 +70,12 @@ def compute_audio_features(y):
         - Chroma: mean and std of 12 chroma features (24 values)
         - Rhythm: estimated tempo; onset strength mean and std (3 values)
         - Total auxiliary feature vector length: 105
+
+    Args:
+        y (np.ndarray): Audio time series  
+    
+    Returns:
+        dict: {"mel": mel_spectrogram, "aux": auxiliary_features}
     """
 
     # Mel spectrogram

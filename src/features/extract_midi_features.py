@@ -234,7 +234,7 @@ def compute_midi_features(midi_path):
         float(pedal_variance)
     ], dtype=np.float32)
     
-    
+
     # ===== Combine all features =====
     features = np.concatenate([
         pc_histogram,      # 12
@@ -251,6 +251,10 @@ def compute_midi_features(midi_path):
 def get_midi_path_from_audio_path(audio_filename, metadata_df):
     """
     Given an audio filename, find the corresponding MIDI filename from the metadata CSV.
+
+    Args:
+        audio_filename (str): Audio filename to look up.
+        metadata_df (pd.DataFrame): DataFrame containing metadata with 'audio_filename' and 'midi_filename' columns.
     """
     matches = metadata_df[metadata_df['audio_filename'] == audio_filename]
     if len(matches) > 0:
