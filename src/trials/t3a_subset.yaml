@@ -1,0 +1,22 @@
+# 
+# t3a_subset.yaml
+# -------------------------
+# Configuration for trial 3a: Subset of composers for focused study.
+# 
+
+experiment:
+  trial: "trial3a"
+  description: "Five composers with >100 works"
+
+dataset:
+  composers:
+    - Bach
+    - Mozart
+    - Beethoven
+    - Chopin
+    - Liszt
+  min_works_per_composer: 100
+
+training:
+  epochs: 50
+  batch_size: 12
