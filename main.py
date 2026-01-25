@@ -6,7 +6,7 @@ Main entry point: runs the end-to-end training pipeline.
 
 from src.preprocessing.load_data import load_maestro_metadata
 from src.preprocessing.audio_preprocess import load_and_convert_audio
-from src.model.cnn_audio import build_audio_cnn
+from src.models.cnn import build_audio_cnn
 from src.training.train_audio_baseline import train_model
 
 def main():
