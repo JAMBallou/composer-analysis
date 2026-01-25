@@ -1,0 +1,65 @@
+# 
+# base.yaml
+# -------------------------
+# Shared base configuration for composer classification trials.
+# 
+
+experiment:
+  name: "composer_classification"
+
+dataset:
+  sample_rate: 22050
+  clip_duration_sec: 30
+  hop_length: 512
+  n_mels: 128
+
+features:
+  audio:
+    mel_spectrogram: true
+    mfcc:
+      enabled: true
+      n_mfcc: 13
+      stats: ["mean", "std"]
+    chroma: true
+    spectral:
+      centroid: true
+      bandwidth: true
+      rolloff: true
+
+  midi:
+    enabled: true
+    note_density: true
+    pitch_range: true
+    mean_velocity: true
+    chord_histogram: true
+
+model:
+  multimodal: true
+
+  audio_cnn:
+    embedding_dim: 256
+    dropout: 0.3
+
+  feature_mlp:
+    embedding_dim: 128
+    hidden_layers: [256, 128]
+    dropout: 0.3
+
+  fusion:
+    hidden_dim: 256
+    dropout: 0.4
+
+training:
+  batch_size: 8
+  epochs: 40
+  learning_rate: 0.0001
+  optimizer: "adam"
+  class_weighting: true
+
+evaluation:
+  metrics: ["accuracy", "confusion_matrix", "f1_macro"]
+
+output:
+  model_dir: "outputs/models"
+  log_dir: "outputs/logs"
+  results_dir: "outputs/results"
