@@ -9,7 +9,7 @@ experiment:
   description: "Contrasting composers from different periods"
 
 dataset:
-  composers: ["Bach", "Chopin"]
+  composers: ["Johann Sebastian Bach", "Frédéric Chopin"]
   min_works_per_composer: 50
 
 training:

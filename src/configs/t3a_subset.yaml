@@ -10,11 +10,11 @@ experiment:
 
 dataset:
   composers:
-    - Bach
-    - Mozart
-    - Beethoven
-    - Chopin
-    - Liszt
+    - Johann Sebastian Bach
+    - Wolfgang Amadeus Mozart
+    - Ludwig van Beethoven
+    - Frédéric Chopin
+    - Franz Liszt
   min_works_per_composer: 100
 
 training:

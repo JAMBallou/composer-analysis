@@ -10,20 +10,20 @@ experiment:
 
 dataset:
   composers:
-    - Bach
-    - Mozart
-    - Beethoven
-    - Haydn
-    - Chopin
-    - Liszt
-    - Schubert
-    - Brahms
-    - Debussy
-    - Rachmaninoff
-    - Scriabin
-    - Mendelssohn
-    - Scarlatti
-    - Schumann
+    - Johann Sebastian Bach
+    - Wolfgang Amadeus Mozart
+    - Ludwig van Beethoven
+    - Joseph Haydn
+    - Frédéric Chopin
+    - Franz Liszt
+    - Franz Schubert
+    - Johannes Brahms
+    - Claude Debussy
+    - Sergei Rachmaninoff
+    - Alexander Scriabin
+    - Felix Mendelssohn
+    - Domenico Scarlatti
+    - Robert Schumann
   min_works_per_composer: 20
 
 training:

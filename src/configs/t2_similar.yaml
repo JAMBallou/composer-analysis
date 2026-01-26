@@ -9,7 +9,7 @@ experiment:
   description: "Romantic-period composers with similar style"
 
 dataset:
-  composers: ["Chopin", "Schubert"]
+  composers: ["Frédéric Chopin", "Franz Schubert"]
   min_works_per_composer: 50
 
 training:
