@@ -1,3 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data and results (large files)
 /data/instrument-samples-philharmonia
 /data/maestro/data
 /py
@@ -7,3 +26,4 @@
 /results/features/midi
 /data/maestro/maestro-v3.0.0.bak.20251223-141456
 /tests
+/outputs
