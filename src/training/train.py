@@ -4,7 +4,7 @@ train.py
 Training script for composer classification models.
 
 To run from command line:
-python src/training/train.py configs/[trial].yaml
+python -m src.training.train configs/[trial].yaml
 """
 
 import os
@@ -13,6 +13,7 @@ import yaml
 import numpy as np
 import tensorflow as tf
 from datetime import datetime
+from pathlib import Path
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -21,10 +22,19 @@ from sklearn.metrics import (
     confusion_matrix
 )
 
-from configs.load_config import load_experiment_config
-from models.multimodal import build_multimodal_model
-from load_features import get_datasets
-from visualization.confusion_matrix import plot_all_confusion_matrices
+# Handle imports whether run as module or directly
+if __name__ == "__main__" and __package__ is None:
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from configs.load_config import load_experiment_config
+    from models.multimodal import build_multimodal_model
+    from training.load_features import get_datasets
+    from visualization.confusion_matrix import plot_all_confusion_matrices
+else:
+    from ..configs.load_config import load_experiment_config
+    from ..models.multimodal import build_multimodal_model
+    from .load_features import get_datasets
+    from ..visualization.confusion_matrix import plot_all_confusion_matrices
 
 # ===== Load Config & Setup Directories =====
 
@@ -44,13 +54,15 @@ def setup_run_dirs(config):
 # ===== Build Model =====
 
 def build_model(config, num_classes, feature_dim, audio_shape):
-    audio_cfg = config["model"]["audio_cnn"]
-    mlp_cfg = config["model"]["feature_mlp"]
-    fusion_cfg = config["model"]["fusion"]
-
+    """Build multimodal model with audio and MIDI features."""
+    # Extract audio shape components
+    mel_bins = audio_shape[0]
+    time_frames = audio_shape[1]
+    
     model = build_multimodal_model(
-        audio_shape=audio_shape,
-        midi_shape=feature_dim,
+        mel_bins=mel_bins,
+        time_frames=time_frames,
+        num_engineered_features=feature_dim,
         num_classes=num_classes
     )
 
@@ -179,3 +191,12 @@ def main(trial_config_path):
             "confusion_matrices"
         )
     )
+
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) > 1:
+        config_path = sys.argv[1]
+    else:
+        config_path = "configs/base.yaml"
+    main(config_path)

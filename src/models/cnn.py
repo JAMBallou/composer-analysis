@@ -73,7 +73,7 @@ def build_cnn_audio_model(
     outputs = layers.Dense(
         num_classes,
         activation="softmax",
-        name="composer_logits"
+        name="cnn_output"
     )(x)
 
     model = models.Model(
