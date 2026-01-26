@@ -183,14 +183,8 @@ def main(trial_config_path):
     for k, v in metrics.items():
         print(f"{k}: {v:.4f}")
 
-    # Automatically generate confusion matrix plots
-    plot_all_confusion_matrices(
-        results_dir=config["output"]["results_dir"],
-        output_dir=os.path.join(
-            config["output"]["results_dir"],
-            "confusion_matrices"
-        )
-    )
+    # Automatically generate confusion matrix plots for this run
+    plot_all_confusion_matrices(run_dir)
 
 
 if __name__ == "__main__":

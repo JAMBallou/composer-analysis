@@ -16,11 +16,12 @@ def plot_confusion_matrix(
     save_path,
     normalize=False
 ):
+    """Plot and save a confusion matrix."""
     if normalize:
         cm = cm.astype(float) / cm.sum(axis=1, keepdims=True)
 
     plt.figure(figsize=(10, 8))
-    plt.imshow(cm)
+    plt.imshow(cm, cmap='Blues')
     plt.title(title)
     plt.colorbar()
 
@@ -49,7 +50,9 @@ def plot_confusion_matrix(
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-def load_confusion_matrix(run_dir):
+
+def plot_confusion_matrices_for_run(run_dir):
+    """Plot and save confusion matrices for a specific trial run."""
     json_path = os.path.join(run_dir, "confusion_matrix.json")
     npy_path = os.path.join(run_dir, "confusion_matrix.npy")
 
@@ -58,61 +61,44 @@ def load_confusion_matrix(run_dir):
             data = json.load(f)
         labels = data["labels"]
         cm = np.array(data["matrix"])
-
     elif os.path.exists(npy_path):
         cm = np.load(npy_path)
         labels = [f"Class {i}" for i in range(cm.shape[0])]
-
     else:
-        raise FileNotFoundError("No confusion matrix found.")
+        return False
 
-    return cm, labels
+    # Raw confusion matrix
+    plot_confusion_matrix(
+        cm,
+        labels,
+        title="Confusion Matrix",
+        save_path=os.path.join(run_dir, "confusion_matrix.png"),
+        normalize=False
+    )
 
-def plot_all_confusion_matrices(
-    results_dir="results",
-    output_dir="results/confusion_matrices"
-):
-    os.makedirs(output_dir, exist_ok=True)
+    # Normalized confusion matrix
+    plot_confusion_matrix(
+        cm,
+        labels,
+        title="Normalized Confusion Matrix",
+        save_path=os.path.join(run_dir, "confusion_matrix_normalized.png"),
+        normalize=True
+    )
 
-    for run_name in os.listdir(results_dir):
-        run_dir = os.path.join(results_dir, run_name)
+    return True
 
-        if not os.path.isdir(run_dir):
-            continue
+def plot_all_confusion_matrices(run_dir):
+    """Plot confusion matrices for a specific run directory."""
+    if plot_confusion_matrices_for_run(run_dir):
+        print(f"Saved confusion matrices to {run_dir}")
+    else:
+        print(f"No confusion matrix found in {run_dir}")
 
-        try:
-            cm, labels = load_confusion_matrix(run_dir)
-        except FileNotFoundError:
-            continue
-
-        base_name = run_name.replace("/", "_")
-
-        # Raw confusion matrix
-        plot_confusion_matrix(
-            cm,
-            labels,
-            title=f"Confusion Matrix — {run_name}",
-            save_path=os.path.join(
-                output_dir, f"{base_name}_raw.png"
-            ),
-            normalize=False
-        )
-
-        # Normalized confusion matrix
-        plot_confusion_matrix(
-            cm,
-            labels,
-            title=f"Normalized Confusion Matrix — {run_name}",
-            save_path=os.path.join(
-                output_dir, f"{base_name}_normalized.png"
-            ),
-            normalize=True
-        )
-
-        print(f"Saved confusion matrices for {run_name}")
 
 if __name__ == "__main__":
-    plot_all_confusion_matrices(
-        results_dir="results",
-        output_dir="results/confusion_matrices"
-    )
+    # Legacy: plot all confusion matrices from results directory
+    results_dir = "results"
+    for run_name in os.listdir(results_dir):
+        run_path = os.path.join(results_dir, run_name)
+        if os.path.isdir(run_path):
+            plot_all_confusion_matrices(run_path)
