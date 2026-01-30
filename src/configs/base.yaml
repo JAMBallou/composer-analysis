@@ -55,6 +55,7 @@ training:
   learning_rate: 0.0001
   optimizer: "adam"
   class_weighting: true
+  k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
 
 evaluation:
   metrics: ["accuracy", "confusion_matrix", "f1_macro"]
