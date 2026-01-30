@@ -14,4 +14,3 @@ dataset:
 
 training:
   epochs: 25
-  use_simple_split: true  # Use simple train/val/test split instead of k-fold
