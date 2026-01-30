@@ -283,6 +283,10 @@ def train_with_kfold(config, run_dir):
     fold_metrics = []
     fold_cms = []
     
+    # Collect all predictions across folds for combined confusion matrix
+    all_y_true = []
+    all_y_pred = []
+    
     for fold, (train_val_idx, test_idx) in enumerate(kfold.split(X_audio), 1):
         print(f"\n{'='*60}")
         print(f"Fold {fold}/{n_folds}")
@@ -329,6 +333,10 @@ def train_with_kfold(config, run_dir):
         
         y_true = np.array(y_true)
         y_pred = np.array(y_pred)
+        
+        # Add to combined predictions
+        all_y_true.extend(y_true)
+        all_y_pred.extend(y_pred)
         
         # Calculate metrics
         metrics = {
@@ -397,13 +405,37 @@ def train_with_kfold(config, run_dir):
     with open(os.path.join(run_dir, "fold_metrics.json"), "w") as f:
         json.dump(fold_metrics, f, indent=4)
     
-    # Save average confusion matrix
+    # Create combined confusion matrix from all fold predictions
+    all_y_true = np.array(all_y_true)
+    all_y_pred = np.array(all_y_pred)
+    
+    combined_cm = confusion_matrix(all_y_true, all_y_pred)
+    
+    print(f"\n{'='*60}")
+    print("Combined Confusion Matrix (All Folds)")
+    print(f"{'='*60}")
+    print(f"Total predictions: {len(all_y_true)}")
+    print(f"Overall accuracy: {accuracy_score(all_y_true, all_y_pred):.4f}\n")
+    
+    # Save combined confusion matrix (main result)
+    np.save(os.path.join(run_dir, "confusion_matrix.npy"), combined_cm)
+    
+    combined_cm_labeled = {
+        "labels": class_names,
+        "matrix": combined_cm.tolist(),
+        "description": "Combined confusion matrix aggregated from all fold predictions"
+    }
+    with open(os.path.join(run_dir, "confusion_matrix.json"), "w") as f:
+        json.dump(combined_cm_labeled, f, indent=4)
+    
+    # Also save average confusion matrix for reference
     avg_cm = np.mean(fold_cms, axis=0)
     np.save(os.path.join(run_dir, "avg_confusion_matrix.npy"), avg_cm)
     
     avg_cm_labeled = {
         "labels": class_names,
-        "matrix": avg_cm.tolist()
+        "matrix": avg_cm.tolist(),
+        "description": "Average of individual fold confusion matrices"
     }
     with open(os.path.join(run_dir, "avg_confusion_matrix.json"), "w") as f:
         json.dump(avg_cm_labeled, f, indent=4)
