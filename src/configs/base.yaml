@@ -37,29 +37,29 @@ model:
   multimodal: true
 
   audio_cnn:
-    embedding_dim: 256
-    dropout: 0.3
+    embedding_dim: 512  # Increased from 256
+    dropout: 0.2  # Reduced from 0.3 for better learning
 
   feature_mlp:
-    embedding_dim: 128
-    hidden_layers: [256, 128]
-    dropout: 0.3
+    embedding_dim: 256  # Increased from 128
+    hidden_layers: [512, 256]  # Increased from [256, 128]
+    dropout: 0.2  # Reduced from 0.3
 
   fusion:
-    hidden_dim: 256
-    dropout: 0.4
+    hidden_dim: 512  # Increased from 256
+    dropout: 0.3  # Reduced from 0.4
 
 training:
   batch_size: 8
   epochs: 40
-  learning_rate: 0.0001
+  learning_rate: 0.00005  # Lowered from 0.0001 for more stable learning
   optimizer: "adam"
   class_weighting: true
   k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
   early_stopping:
     enabled: true
-    patience: 5  # Stop if validation accuracy doesn't improve for 5 epochs
-    min_delta: 0.001  # Minimum change to qualify as an improvement
+    patience: 10  # Increased from 5 to allow more learning time
+    min_delta: 0.0005  # Lowered threshold for more sensitive stopping
 
 evaluation:
   metrics: ["accuracy", "confusion_matrix", "f1_macro"]

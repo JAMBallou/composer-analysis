@@ -27,5 +27,10 @@ dataset:
   min_works_per_composer: 20
 
 training:
-  epochs: 60
+  epochs: 150  # Extended for 14-class classification task
+  batch_size: 16  # Increased for better gradient estimates with many classes
+  learning_rate: 0.00005  # Lower learning rate for stable convergence
+  early_stopping:
+    patience: 10  # Allow more epochs without improvement
+    min_delta: 0.0005
   class_weighting: true
