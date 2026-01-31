@@ -56,6 +56,10 @@ training:
   optimizer: "adam"
   class_weighting: true
   k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
+  early_stopping:
+    enabled: true
+    patience: 5  # Stop if validation accuracy doesn't improve for 5 epochs
+    min_delta: 0.001  # Minimum change to qualify as an improvement
 
 evaluation:
   metrics: ["accuracy", "confusion_matrix", "f1_macro"]

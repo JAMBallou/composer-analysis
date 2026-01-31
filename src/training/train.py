@@ -14,6 +14,15 @@ import numpy as np
 import tensorflow as tf
 from datetime import datetime
 from pathlib import Path
+
+# Enable mixed precision training for GPU acceleration
+try:
+    policy = tf.keras.mixed_precision.Policy('mixed_float16')
+    tf.keras.mixed_precision.set_global_policy(policy)
+    print("Mixed precision training enabled (float16)")
+except Exception as e:
+    print(f"Note: Mixed precision not available - {e}")
+
 from sklearn.metrics import (
     accuracy_score,
     precision_score,
@@ -163,19 +172,28 @@ def compile_model(model, config):
 def train_model(model, train_ds, val_ds, config):
     callbacks = []
 
-    if config["training"].get("early_stopping", {}).get("enabled", False):
+    # Early stopping configuration
+    early_stop_config = config["training"].get("early_stopping", {})
+    if early_stop_config.get("enabled", False):
+        patience = early_stop_config.get("patience", 5)
+        min_delta = early_stop_config.get("min_delta", 0.001)
         callbacks.append(
             tf.keras.callbacks.EarlyStopping(
-                patience=config["training"]["early_stopping"]["patience"],
-                restore_best_weights=True
+                monitor="val_accuracy",
+                patience=patience,
+                min_delta=min_delta,
+                restore_best_weights=True,
+                verbose=1
             )
         )
+        print(f"Early stopping enabled: patience={patience}, min_delta={min_delta}")
 
     history = model.fit(
         train_ds,
         validation_data=val_ds,
         epochs=config["training"]["epochs"],
-        callbacks=callbacks
+        callbacks=callbacks,
+        verbose=1
     )
 
     return history
