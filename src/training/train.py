@@ -15,13 +15,19 @@ import tensorflow as tf
 from datetime import datetime
 from pathlib import Path
 
-# Enable mixed precision training for GPU acceleration
+# Enable mixed precision training for GPU acceleration (only on GPU)
+# CPU + float16 is VERY slow without AVX-512 support
 try:
-    policy = tf.keras.mixed_precision.Policy('mixed_float16')
-    tf.keras.mixed_precision.set_global_policy(policy)
-    print("Mixed precision training enabled (float16)")
+    gpus = tf.config.list_physical_devices('GPU')
+    if gpus:
+        # Only enable mixed precision if GPU is available
+        policy = tf.keras.mixed_precision.Policy('mixed_float16')
+        tf.keras.mixed_precision.set_global_policy(policy)
+        print(f"✓ Mixed precision training enabled (float16) on {len(gpus)} GPU(s)")
+    else:
+        print("CPU-only training detected - using float32 (faster without AVX-512 GPU support)")
 except Exception as e:
-    print(f"Note: Mixed precision not available - {e}")
+    print(f"Note: Could not enable mixed precision - {e}")
 
 from sklearn.metrics import (
     accuracy_score,
