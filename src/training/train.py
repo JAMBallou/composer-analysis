@@ -36,7 +36,7 @@ from sklearn.metrics import (
     f1_score,
     confusion_matrix
 )
-from sklearn.model_selection import KFold
+from sklearn.model_selection import StratifiedKFold
 
 # Handle imports whether run as module or directly
 if __name__ == "__main__" and __package__ is None:
@@ -282,6 +282,10 @@ def save_model(model, run_dir, config):
 
 def train_with_kfold(config, run_dir):
     """Train model using k-fold cross validation."""
+    # Set random seeds for reproducibility
+    np.random.seed(42)
+    tf.random.set_seed(42)
+    
     n_folds = config["training"].get("k_folds", 5)
     batch_size = config["training"].get("batch_size", 8)
     
@@ -301,8 +305,8 @@ def train_with_kfold(config, run_dir):
     print(f"Classes: {class_names}")
     print(f"Samples per class: {np.bincount(y)}\n")
     
-    # K-Fold split
-    kfold = KFold(n_splits=n_folds, shuffle=True, random_state=42)
+    # K-Fold split (stratified to maintain class balance)
+    kfold = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
     
     fold_metrics = []
     fold_cms = []
@@ -311,14 +315,15 @@ def train_with_kfold(config, run_dir):
     all_y_true = []
     all_y_pred = []
     
-    for fold, (train_val_idx, test_idx) in enumerate(kfold.split(X_audio), 1):
+    for fold, (train_val_idx, test_idx) in enumerate(kfold.split(X_audio, y), 1):
         print(f"\n{'='*60}")
         print(f"Fold {fold}/{n_folds}")
         print(f"{'='*60}")
         
         # Further split train_val into train and validation
         n_train = int(len(train_val_idx) * 0.85)  # 85% train, 15% val
-        np.random.shuffle(train_val_idx)
+        rng = np.random.RandomState(42 + fold)  # Unique seed per fold
+        rng.shuffle(train_val_idx)
         train_idx = train_val_idx[:n_train]
         val_idx = train_val_idx[n_train:]
         
