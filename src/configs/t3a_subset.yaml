@@ -18,9 +18,9 @@ dataset:
   min_works_per_composer: 100
 
 training:
-  epochs: 100  # Increased from 50 for more learning time on 5-class task
-  batch_size: 16  # Increased from 12 for better gradient estimates
-  learning_rate: 0.00005  # Lower learning rate for stable convergence
+  epochs: 100
+  batch_size: 24  # Increased from 16 for more stable gradients
+  learning_rate: 0.00005
   early_stopping:
-    patience: 10  # Allow more epochs without improvement
-    min_delta: 0.0005
+    patience: 20  # Increased from 10 to allow learning through noisy periods
+    min_delta: 0.0003  # Lowered from 0.0005 for more sensitive detection
