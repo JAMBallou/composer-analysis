@@ -36,7 +36,7 @@ from sklearn.metrics import (
     f1_score,
     confusion_matrix
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
 
 # Handle imports whether run as module or directly
 if __name__ == "__main__" and __package__ is None:
@@ -107,14 +107,12 @@ def load_all_features(config):
     if len(X_audio.shape) == 3:
         X_audio = X_audio[..., np.newaxis]
     
-    # Normalize
+    # Convert to float32 (normalization happens per-fold to avoid leakage)
     X_audio = X_audio.astype(np.float32)
-    X_audio = (X_audio - X_audio.mean()) / (X_audio.std() + 1e-8)
     
     X_midi = X_midi.astype(np.float32)
     if len(X_midi.shape) == 1:
         X_midi = X_midi.reshape(-1, 1)
-    X_midi = (X_midi - X_midi.mean(axis=0)) / (X_midi.std(axis=0) + 1e-8)
     
     metadata = {
         "num_classes": len(composers),
@@ -148,12 +146,21 @@ def build_model(config, num_classes, feature_dim, audio_shape):
     # Extract audio shape components
     mel_bins = audio_shape[0]
     time_frames = audio_shape[1]
+
+    audio_cfg = config.get("model", {}).get("audio_cnn", {})
+    feature_cfg = config.get("model", {}).get("feature_mlp", {})
+    fusion_cfg = config.get("model", {}).get("fusion", {})
     
     model = build_multimodal_model(
         mel_bins=mel_bins,
         time_frames=time_frames,
         num_engineered_features=feature_dim,
-        num_classes=num_classes
+        num_classes=num_classes,
+        audio_embedding_dim=audio_cfg.get("embedding_dim", 256),
+        feature_embedding_dim=feature_cfg.get("embedding_dim", 128),
+        fusion_hidden_dim=fusion_cfg.get("hidden_dim", 256),
+        dropout_rate=fusion_cfg.get("dropout", 0.4),
+        fusion_type=fusion_cfg.get("type", "concat")
     )
 
     return model
@@ -193,6 +200,26 @@ def train_model(model, train_ds, val_ds, config):
             )
         )
         print(f"Early stopping enabled: patience={patience}, min_delta={min_delta}")
+
+    # Learning rate schedule (ReduceLROnPlateau)
+    lr_schedule_config = config["training"].get("lr_schedule", {})
+    if lr_schedule_config.get("enabled", False):
+        factor = lr_schedule_config.get("factor", 0.5)
+        patience = lr_schedule_config.get("patience", 3)
+        min_lr = lr_schedule_config.get("min_lr", 1e-6)
+        callbacks.append(
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor="val_loss",
+                factor=factor,
+                patience=patience,
+                min_lr=min_lr,
+                verbose=1
+            )
+        )
+        print(
+            "LR schedule enabled: "
+            f"factor={factor}, patience={patience}, min_lr={min_lr}"
+        )
 
     history = model.fit(
         train_ds,
@@ -320,15 +347,35 @@ def train_with_kfold(config, run_dir):
         print(f"Fold {fold}/{n_folds}")
         print(f"{'='*60}")
         
-        # Further split train_val into train and validation
-        n_train = int(len(train_val_idx) * 0.85)  # 85% train, 15% val
-        rng = np.random.RandomState(42 + fold)  # Unique seed per fold
-        rng.shuffle(train_val_idx)
-        train_idx = train_val_idx[:n_train]
-        val_idx = train_val_idx[n_train:]
+        # Further split train_val into train and validation (stratified)
+        sss = StratifiedShuffleSplit(
+            n_splits=1,
+            test_size=0.15,
+            random_state=42 + fold
+        )
+        train_rel_idx, val_rel_idx = next(
+            sss.split(train_val_idx, y[train_val_idx])
+        )
+        train_idx = train_val_idx[train_rel_idx]
+        val_idx = train_val_idx[val_rel_idx]
         
         print(f"Train: {len(train_idx)}, Val: {len(val_idx)}, Test: {len(test_idx)}")
         
+        # Per-fold normalization (fit on train only to avoid leakage)
+        audio_mean = X_audio[train_idx].mean()
+        audio_std = X_audio[train_idx].std() + 1e-8
+
+        midi_mean = X_midi[train_idx].mean(axis=0)
+        midi_std = X_midi[train_idx].std(axis=0) + 1e-8
+
+        X_audio_train = (X_audio[train_idx] - audio_mean) / audio_std
+        X_audio_val = (X_audio[val_idx] - audio_mean) / audio_std
+        X_audio_test = (X_audio[test_idx] - audio_mean) / audio_std
+
+        X_midi_train = (X_midi[train_idx] - midi_mean) / midi_std
+        X_midi_val = (X_midi[val_idx] - midi_mean) / midi_std
+        X_midi_test = (X_midi[test_idx] - midi_mean) / midi_std
+
         # Create datasets for this fold
         def create_dataset(x_audio, x_midi, y_labels):
             dataset = tf.data.Dataset.from_tensor_slices(((x_audio, x_midi), y_labels))
@@ -337,9 +384,9 @@ def train_with_kfold(config, run_dir):
             dataset = dataset.prefetch(tf.data.AUTOTUNE)
             return dataset
         
-        train_ds = create_dataset(X_audio[train_idx], X_midi[train_idx], y[train_idx])
-        val_ds = create_dataset(X_audio[val_idx], X_midi[val_idx], y[val_idx])
-        test_ds = create_dataset(X_audio[test_idx], X_midi[test_idx], y[test_idx])
+        train_ds = create_dataset(X_audio_train, X_midi_train, y[train_idx])
+        val_ds = create_dataset(X_audio_val, X_midi_val, y[val_idx])
+        test_ds = create_dataset(X_audio_test, X_midi_test, y[test_idx])
         
         # Build and compile model
         model = build_model(config, num_classes, feature_dim, audio_shape)

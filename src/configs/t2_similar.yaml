@@ -12,5 +12,21 @@ dataset:
   composers: ["Frédéric Chopin", "Franz Schubert"]
   min_works_per_composer: 50
 
+model:
+  audio_cnn:
+    embedding_dim: 256
+    dropout: 0.3  # Match original successful config
+  feature_mlp:
+    embedding_dim: 128
+    hidden_layers: [256, 128]
+    dropout: 0.3  # Match original successful config
+  fusion:
+    hidden_dim: 256
+    dropout: 0.4  # Match original successful config
+
 training:
-  epochs: 35
+  epochs: 50  # Increased from original 35
+  batch_size: 16  # Doubled from original 8 for more stable gradients
+  learning_rate: 0.0001  # Match original successful config (NOT the reduced base.yaml value)
+  early_stopping:
+    enabled: false  # Disable - original didn't use it and worked better

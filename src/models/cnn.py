@@ -12,7 +12,8 @@ def build_cnn_audio_model(
     mel_bins: int = 128,
     time_frames: int = 2580,
     num_classes: int = 2,
-    dropout_rate: float = 0.3
+    dropout_rate: float = 0.3,
+    output_activation: str | None = "softmax"
 ) -> tf.keras.Model:
     """
     CNN model for mel-spectrogram-based composer classification.
@@ -72,7 +73,7 @@ def build_cnn_audio_model(
     # ===== Output =====
     outputs = layers.Dense(
         num_classes,
-        activation="softmax",
+        activation=output_activation,
         name="cnn_output"
     )(x)
 

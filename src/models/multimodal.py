@@ -19,7 +19,8 @@ def build_multimodal_model(
     audio_embedding_dim: int = 256,
     feature_embedding_dim: int = 128,
     fusion_hidden_dim: int = 256,
-    dropout_rate: float = 0.4
+    dropout_rate: float = 0.4,
+    fusion_type: str = "concat"
 ) -> tf.keras.Model:
     """
     Multimodal composer classification model combining:
@@ -54,7 +55,8 @@ def build_multimodal_model(
     audio_cnn = build_cnn_audio_model(
         mel_bins=mel_bins,
         time_frames=time_frames,
-        num_classes=audio_embedding_dim
+        num_classes=audio_embedding_dim,
+        output_activation=None
     )
 
     # Remove softmax head → treat output as embedding
@@ -76,10 +78,37 @@ def build_multimodal_model(
 
     # ===== Fusion =====
 
-    fused = layers.Concatenate(name="fusion_concat")([
-        audio_embedding,
-        feature_embedding
-    ])
+    if fusion_type == "gated":
+        audio_proj = layers.Dense(
+            fusion_hidden_dim,
+            activation="relu",
+            name="fusion_audio_proj"
+        )(audio_embedding)
+        feature_proj = layers.Dense(
+            fusion_hidden_dim,
+            activation="relu",
+            name="fusion_feature_proj"
+        )(feature_embedding)
+
+        fusion_concat = layers.Concatenate(name="fusion_concat")([
+            audio_embedding,
+            feature_embedding
+        ])
+        gate = layers.Dense(
+            fusion_hidden_dim,
+            activation="sigmoid",
+            name="fusion_gate"
+        )(fusion_concat)
+
+        fused = layers.Add(name="fusion_gated")([
+            layers.Multiply()([gate, audio_proj]),
+            layers.Multiply()([layers.Lambda(lambda x: 1.0 - x)(gate), feature_proj])
+        ])
+    else:
+        fused = layers.Concatenate(name="fusion_concat")([
+            audio_embedding,
+            feature_embedding
+        ])
 
     x = layers.Dense(
         fusion_hidden_dim,

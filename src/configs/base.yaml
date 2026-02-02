@@ -48,6 +48,7 @@ model:
   fusion:
     hidden_dim: 512  # Increased from 256
     dropout: 0.3  # Reduced from 0.4
+    type: "gated" # Changed from "concat" to "gated" for better modality integration
 
 training:
   batch_size: 8
@@ -56,6 +57,11 @@ training:
   optimizer: "adam"
   class_weighting: true
   k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
+  lr_schedule:
+    enabled: true
+    factor: 0.5
+    patience: 3
+    min_lr: 0.000001
   early_stopping:
     enabled: true
     patience: 10  # Increased from 5 to allow more learning time
