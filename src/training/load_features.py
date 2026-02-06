@@ -8,6 +8,7 @@ import numpy as np
 import tensorflow as tf
 from pathlib import Path
 import pandas as pd
+from sklearn.utils.class_weight import compute_class_weight
 
 
 def get_datasets(config, batch_size=None):
@@ -141,6 +142,17 @@ def get_datasets(config, batch_size=None):
     val_idx = indices[n_train:n_train + n_val]
     test_idx = indices[n_train + n_val:]
     
+    # Class weights (optional)
+    class_weights = None
+    if config["training"].get("class_weighting", False):
+        classes = np.unique(y[train_idx])
+        weights = compute_class_weight(
+            class_weight="balanced",
+            classes=classes,
+            y=y[train_idx]
+        )
+        class_weights = {int(c): float(w) for c, w in zip(classes, weights)}
+
     # Create datasets
     def create_dataset(x_audio, x_midi, y_labels):
         dataset = tf.data.Dataset.from_tensor_slices(((x_audio, x_midi), y_labels))
@@ -159,6 +171,7 @@ def get_datasets(config, batch_size=None):
         "class_names": composers,
         "feature_dim": X_midi.shape[1],
         "audio_shape": tuple(X_audio.shape[1:]),
+        "class_weights": class_weights,
     }
     
     return train_ds, val_ds, test_ds, metadata

@@ -37,18 +37,18 @@ model:
   multimodal: true
 
   audio_cnn:
-    embedding_dim: 512  # Increased from 256
-    dropout: 0.2  # Reduced from 0.3 for better learning
+    embedding_dim: 256  # Reduced from 512 for stability
+    dropout: 0.3
 
   feature_mlp:
-    embedding_dim: 256  # Increased from 128
-    hidden_layers: [512, 256]  # Increased from [256, 128]
-    dropout: 0.2  # Reduced from 0.3
+    embedding_dim: 128  # Reduced from 256 for stability
+    hidden_layers: [256, 128]  # Reduced from [512, 256]
+    dropout: 0.3
 
   fusion:
-    hidden_dim: 512  # Increased from 256
-    dropout: 0.3  # Reduced from 0.4
-    type: "gated" # Changed from "concat" to "gated" for better modality integration
+    hidden_dim: 256  # Reduced from 512 for stability
+    dropout: 0.3
+    type: "concat"  # Revert to simple concatenation (gated was causing instability) # Changed from "concat" to "gated" for better modality integration
 
 training:
   batch_size: 8
@@ -58,14 +58,9 @@ training:
   class_weighting: true
   k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
   lr_schedule:
-    enabled: true
-    factor: 0.5
-    patience: 3
-    min_lr: 0.000001
+    enabled: false  # Disable for stability - was causing aggressive LR drops
   early_stopping:
-    enabled: true
-    patience: 10  # Increased from 5 to allow more learning time
-    min_delta: 0.0005  # Lowered threshold for more sensitive stopping
+    enabled: false # Disable becasue it was causing premature stopping in some trials 
 
 evaluation:
   metrics: ["accuracy", "confusion_matrix", "f1_macro"]

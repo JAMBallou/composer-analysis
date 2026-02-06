@@ -37,6 +37,7 @@ from sklearn.metrics import (
     confusion_matrix
 )
 from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
+from sklearn.utils.class_weight import compute_class_weight
 
 # Handle imports whether run as module or directly
 if __name__ == "__main__" and __package__ is None:
@@ -182,7 +183,7 @@ def compile_model(model, config):
 
 # ===== Train Model =====
 
-def train_model(model, train_ds, val_ds, config):
+def train_model(model, train_ds, val_ds, config, class_weight=None):
     callbacks = []
 
     # Early stopping configuration
@@ -226,6 +227,7 @@ def train_model(model, train_ds, val_ds, config):
         validation_data=val_ds,
         epochs=config["training"]["epochs"],
         callbacks=callbacks,
+        class_weight=class_weight,
         verbose=1
     )
 
@@ -394,7 +396,17 @@ def train_with_kfold(config, run_dir):
         
         # Train
         print(f"\nTraining fold {fold}...")
-        train_model(model, train_ds, val_ds, config)
+        class_weight = None
+        if config["training"].get("class_weighting", False):
+            y_train = y[train_idx]
+            classes = np.unique(y_train)
+            weights = compute_class_weight(
+                class_weight="balanced",
+                classes=classes,
+                y=y_train
+            )
+            class_weight = {int(c): float(w) for c, w in zip(classes, weights)}
+        train_model(model, train_ds, val_ds, config, class_weight=class_weight)
         
         # Evaluate on test set
         y_true = []
@@ -551,7 +563,10 @@ def main(trial_config_path):
         compile_model(model, config)
 
         # Train
-        train_model(model, train_ds, val_ds, config)
+        class_weight = None
+        if config["training"].get("class_weighting", False):
+            class_weight = metadata.get("class_weights")
+        train_model(model, train_ds, val_ds, config, class_weight=class_weight)
 
         # Evaluate
         metrics = evaluate_model(model, test_ds, run_dir, class_names)
