@@ -4,12 +4,14 @@ confusion_matrix.py
 Visualization script for confusion matrices from composer classification models.
 
 Shell command usage:
-python -m src.visualization.confusion_matrix <path_to_confusion_matrix>.npy
-
+python -m src.visualization.confusion_matrix <path_to_confusion_matrix>.npy 
+ - Use --presentation to enlarge fonts for presentation display
+ - Use --greyscale to use greyscale colormap instead of blue
 """
 
 import os
 import json
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -18,22 +20,43 @@ def plot_confusion_matrix(
     labels,
     title,
     save_path,
-    normalize=False
+    normalize=False,
+    presentation=False,
+    greyscale=False
 ):
     """Plot and save a confusion matrix."""
     if normalize:
         cm = cm.astype(float) / cm.sum(axis=1, keepdims=True)
 
+    # Font sizes for presentation mode
+    if presentation:
+        title_size = 24
+        label_size = 18
+        tick_size = 14
+        text_size = 14
+    else:
+        title_size = 12
+        label_size = 10
+        tick_size = 9
+        text_size = 8
+
+    # Colormap selection
+    cmap = 'Greys' if greyscale else 'Blues'
+
     plt.figure(figsize=(10, 8))
-    plt.imshow(cm, cmap='Blues')
-    plt.title(title)
+    plt.imshow(cm, cmap=cmap)
+    plt.title(title, fontsize=title_size, fontweight='bold' if presentation else 'normal')
     plt.colorbar()
 
     tick_marks = np.arange(len(labels))
-    plt.xticks(tick_marks, labels, rotation=45, ha="right")
-    plt.yticks(tick_marks, labels)
+    plt.xticks(tick_marks, labels, rotation=45, ha="right", fontsize=tick_size)
+    plt.yticks(tick_marks, labels, fontsize=tick_size)
 
-    fmt = ".2f" if normalize else "d"
+    # Choose format based on whether values are integers or floats
+    if normalize or np.issubdtype(cm.dtype, np.floating):
+        fmt = ".2f"
+    else:
+        fmt = "d"
     thresh = cm.max() / 2
 
     for i in range(cm.shape[0]):
@@ -45,11 +68,11 @@ def plot_confusion_matrix(
                 ha="center",
                 va="center",
                 color="white" if cm[i, j] > thresh else "black",
-                fontsize=8
+                fontsize=text_size
             )
 
-    plt.ylabel("True label")
-    plt.xlabel("Predicted label")
+    plt.ylabel("True label", fontsize=label_size)
+    plt.xlabel("Predicted label", fontsize=label_size)
     plt.tight_layout()
     plt.savefig(save_path, dpi=300)
     plt.close()
@@ -102,9 +125,30 @@ def plot_all_confusion_matrices(run_dir):
 if __name__ == "__main__":
     import sys
     
-    if len(sys.argv) > 1:
+    parser = argparse.ArgumentParser(
+        description="Plot confusion matrices from .npy files"
+    )
+    parser.add_argument(
+        "npy_file",
+        nargs='?',
+        help="Path to confusion matrix .npy file"
+    )
+    parser.add_argument(
+        "--presentation",
+        action="store_true",
+        help="Use larger fonts suitable for presentation display"
+    )
+    parser.add_argument(
+        "--greyscale",
+        action="store_true",
+        help="Use greyscale colormap instead of blue"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.npy_file:
         # Command-line mode: plot confusion matrix from specified .npy file
-        npy_file = sys.argv[1]
+        npy_file = args.npy_file
         
         if not os.path.exists(npy_file):
             print(f"Error: File not found: {npy_file}")
@@ -132,26 +176,35 @@ if __name__ == "__main__":
             output_dir = "."
         
         base_name = os.path.basename(npy_file).replace('.npy', '')
+        suffix = ""
+        if args.presentation:
+            suffix += "_presentation"
+        if args.greyscale:
+            suffix += "_greyscale"
         
         # Plot raw confusion matrix
-        raw_output = os.path.join(output_dir, f"{base_name}.png")
+        raw_output = os.path.join(output_dir, f"{base_name}{suffix}.png")
         plot_confusion_matrix(
             cm,
             labels,
             title="Confusion Matrix",
             save_path=raw_output,
-            normalize=False
+            normalize=False,
+            presentation=args.presentation,
+            greyscale=args.greyscale
         )
         print(f"Saved confusion matrix to: {raw_output}")
         
         # Plot normalized confusion matrix
-        norm_output = os.path.join(output_dir, f"{base_name}_normalized.png")
+        norm_output = os.path.join(output_dir, f"{base_name}_normalized{suffix}.png")
         plot_confusion_matrix(
             cm,
             labels,
             title="Normalized Confusion Matrix",
             save_path=norm_output,
-            normalize=True
+            normalize=True,
+            presentation=args.presentation,
+            greyscale=args.greyscale
         )
         print(f"Saved normalized confusion matrix to: {norm_output}")
     else:
