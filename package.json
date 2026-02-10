@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "cloc": "^2.6.0-cloc"
+    "cloc": "^2.6.0-cloc",
+    "tokei": "^0.3.5"
   }
 }
