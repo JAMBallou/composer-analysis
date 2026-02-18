@@ -47,11 +47,23 @@ if __name__ == "__main__" and __package__ is None:
     from models.multimodal import build_multimodal_model
     from training.load_features import get_datasets
     from visualization.confusion_matrix import plot_all_confusion_matrices
+    from utils.losses import (
+        weighted_sparse_categorical_crossentropy,
+        focal_loss,
+        compute_class_weights_balanced,
+        compute_class_weights_inverse_frequency
+    )
 else:
     from ..configs.load_config import load_experiment_config
     from ..models.multimodal import build_multimodal_model
     from .load_features import get_datasets
     from ..visualization.confusion_matrix import plot_all_confusion_matrices
+    from ..utils.losses import (
+        weighted_sparse_categorical_crossentropy,
+        focal_loss,
+        compute_class_weights_balanced,
+        compute_class_weights_inverse_frequency
+    )
 
 # ===== Helper Functions =====
 
@@ -169,14 +181,46 @@ def build_model(config, num_classes, feature_dim, audio_shape):
 
 # ===== Compile Model =====
 
-def compile_model(model, config):
+def compile_model(model, config, class_weights=None):
+    """
+    Compile the model with optimizer and loss function.
+    
+    Args:
+        model: The Keras model to compile
+        config: Configuration dictionary
+        class_weights: Optional dict of class weights for weighted loss
+    """
     optimizer = tf.keras.optimizers.Adam(
         learning_rate=config["training"]["learning_rate"]
     )
+    
+    # Determine loss function based on configuration
+    loss_config = config["training"].get("loss", {})
+    loss_type = loss_config.get("type", "sparse_categorical_crossentropy")
+    use_class_weighting = loss_config.get("use_class_weights", True)
+    
+    if use_class_weighting and class_weights is not None:
+        if loss_type == "focal_loss":
+            gamma = loss_config.get("focal_gamma", 2.0)
+            alpha = loss_config.get("focal_alpha", 0.25)
+            loss = focal_loss(alpha=alpha, gamma=gamma, class_weights=class_weights)
+            print(f"✓ Using focal loss (gamma={gamma}, alpha={alpha}) with class weights")
+        elif loss_type == "weighted_crossentropy":
+            loss = weighted_sparse_categorical_crossentropy(class_weights)
+            print(f"✓ Using weighted categorical crossentropy with class weights: {class_weights}")
+        else:
+            loss = "sparse_categorical_crossentropy"
+            print("✓ Using standard sparse categorical crossentropy (class weights will be applied via fit() parameter)")
+    else:
+        # Use standard loss without custom weighting
+        loss = "sparse_categorical_crossentropy"
+        if class_weights is not None:
+            print("✗ Class weights provided but use_class_weights=False in config")
+        print("✓ Using standard sparse categorical crossentropy")
 
     model.compile(
         optimizer=optimizer,
-        loss="sparse_categorical_crossentropy",
+        loss=loss,
         metrics=["accuracy"]
     )
 
@@ -184,6 +228,17 @@ def compile_model(model, config):
 # ===== Train Model =====
 
 def train_model(model, train_ds, val_ds, config, class_weight=None):
+    """
+    Train the model on training dataset with validation.
+    
+    Args:
+        model: The compiled Keras model
+        train_ds: Training dataset (tf.data.Dataset)
+        val_ds: Validation dataset (tf.data.Dataset)
+        config: Configuration dictionary
+        class_weight: Optional dict of class weights for fit() method.
+                     Only used if custom loss function is NOT handling weighting.
+    """
     callbacks = []
 
     # Early stopping configuration
@@ -222,12 +277,19 @@ def train_model(model, train_ds, val_ds, config, class_weight=None):
             f"factor={factor}, patience={patience}, min_lr={min_lr}"
         )
 
+    # Check if custom loss is handling weighting
+    loss_config = config["training"].get("loss", {})
+    use_custom_weighting = loss_config.get("use_class_weights", True) and class_weight is not None
+    
+    # Only pass class_weight to fit() if NOT using custom weighted loss
+    fit_class_weight = None if use_custom_weighting else class_weight
+    
     history = model.fit(
         train_ds,
         validation_data=val_ds,
         epochs=config["training"]["epochs"],
         callbacks=callbacks,
-        class_weight=class_weight,
+        class_weight=fit_class_weight,
         verbose=1
     )
 
@@ -392,20 +454,27 @@ def train_with_kfold(config, run_dir):
         
         # Build and compile model
         model = build_model(config, num_classes, feature_dim, audio_shape)
-        compile_model(model, config)
         
-        # Train
-        print(f"\nTraining fold {fold}...")
+        # Compute class weights for this fold
         class_weight = None
         if config["training"].get("class_weighting", False):
             y_train = y[train_idx]
-            classes = np.unique(y_train)
-            weights = compute_class_weight(
-                class_weight="balanced",
-                classes=classes,
-                y=y_train
-            )
-            class_weight = {int(c): float(w) for c, w in zip(classes, weights)}
+            
+            # Choose weight computation method
+            weight_method = config["training"].get("weight_method", "balanced")
+            if weight_method == "inverse_frequency":
+                class_weight = compute_class_weights_inverse_frequency(y_train)
+            else:  # default: "balanced"
+                class_weight = compute_class_weights_balanced(y_train)
+            
+            print(f"Class weight method: {weight_method}")
+            print(f"Computed weights: {class_weight}")
+        
+        # Compile with class weights
+        compile_model(model, config, class_weights=class_weight)
+        
+        # Train
+        print(f"\nTraining fold {fold}...")
         train_model(model, train_ds, val_ds, config, class_weight=class_weight)
         
         # Evaluate on test set
@@ -560,12 +629,16 @@ def main(trial_config_path):
 
         # Build + compile
         model = build_model(config, num_classes, feature_dim, audio_shape)
-        compile_model(model, config)
-
-        # Train
+        
+        # Get class weights if enabled
         class_weight = None
         if config["training"].get("class_weighting", False):
             class_weight = metadata.get("class_weights")
+            print(f"Using class weights: {class_weight}")
+        
+        compile_model(model, config, class_weights=class_weight)
+
+        # Train
         train_model(model, train_ds, val_ds, config, class_weight=class_weight)
 
         # Evaluate

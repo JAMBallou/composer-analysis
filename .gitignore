@@ -25,5 +25,7 @@ build/
 /results/features/audio
 /results/features/midi
 /data/maestro/maestro-v3.0.0.bak.20251223-141456
+/data/maestro/maestro-v3.0.0.bak.csv
 /tests
 /outputs
+/cmd_outs

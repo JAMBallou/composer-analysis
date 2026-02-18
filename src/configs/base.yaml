@@ -56,6 +56,15 @@ training:
   learning_rate: 0.00005  # Lowered from 0.0001 for more stable learning
   optimizer: "adam"
   class_weighting: true
+  weight_method: "balanced"  # Options: "balanced" or "inverse_frequency"
+  
+  # Loss function configuration for handling class imbalance
+  loss:
+    type: "weighted_crossentropy"  # Options: "sparse_categorical_crossentropy", "weighted_crossentropy", "focal_loss"
+    use_class_weights: true  # Whether to apply class weights to the loss
+    focal_gamma: 2.0  # (only for focal_loss) Focusing parameter for hard examples
+    focal_alpha: 0.25  # (only for focal_loss) Weighting factor for positive/negative examples
+  
   k_folds: 5  # Use k-fold cross validation by default. Set to null or add 'use_simple_split: true' to disable
   lr_schedule:
     enabled: false  # Disable for stability - was causing aggressive LR drops

@@ -9,6 +9,7 @@ import tensorflow as tf
 from pathlib import Path
 import pandas as pd
 from sklearn.utils.class_weight import compute_class_weight
+from ..utils.losses import compute_class_weights_balanced, compute_class_weights_inverse_frequency
 
 
 def get_datasets(config, batch_size=None):
@@ -145,13 +146,17 @@ def get_datasets(config, batch_size=None):
     # Class weights (optional)
     class_weights = None
     if config["training"].get("class_weighting", False):
-        classes = np.unique(y[train_idx])
-        weights = compute_class_weight(
-            class_weight="balanced",
-            classes=classes,
-            y=y[train_idx]
-        )
-        class_weights = {int(c): float(w) for c, w in zip(classes, weights)}
+        # Choose weight computation method
+        weight_method = config["training"].get("weight_method", "balanced")
+        y_train = y[train_idx]
+        
+        if weight_method == "inverse_frequency":
+            class_weights = compute_class_weights_inverse_frequency(y_train)
+        else:  # default: "balanced"
+            class_weights = compute_class_weights_balanced(y_train)
+        
+        print(f"Class weight method: {weight_method}")
+        print(f"Computed class weights: {class_weights}")
 
     # Create datasets
     def create_dataset(x_audio, x_midi, y_labels):
