@@ -1,0 +1,47 @@
+# 
+# temporal_simple.yaml
+# -------------------------
+# Simplified temporal model for faster experimentation.
+# Uses lightweight CNN architecture.
+# 
+
+trial_name: "temporal_simple1"
+
+experiment:
+  name: "temporal_composer_classification_simple"
+  description: "Lightweight 3-segment temporal architecture"
+
+dataset:
+  sample_rate: 22050
+  clip_duration_sec: 60
+  hop_length: 512
+  n_mels: 128
+  composers: []  # All composers
+
+model:
+  architecture: "simple"  # Lightweight architecture
+  
+  lstm_units: 64  # Smaller for simple model
+  dropout_rate: 0.3
+
+training:
+  batch_size: 16  # Larger batch for simple model
+  epochs: 40
+  patience: 8
+  learning_rate: 0.001  # Higher LR for simple model
+  optimizer: "adam"
+  
+  train_split: 0.7
+  val_split: 0.15
+  
+  class_weighting: false  # Try without weighting first
+
+loss:
+  type: "sparse_categorical_crossentropy"
+
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+
+output:
+  model_dir: "outputs/models"
+  results_dir: "outputs/results"

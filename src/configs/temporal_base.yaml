@@ -1,22 +1,23 @@
 # 
-# base.yaml
+# temporal_base.yaml
 # -------------------------
-# Shared base configuration for temporal composer classification (3-segment architecture).
+# Configuration for temporal multimodal composer classification (3-segment architecture).
+# This architecture uses start/middle/end segments to capture musical structure.
 # 
 
-trial_name: "temporal_base"
+trial_name: "temporal_trial1"
 
 experiment:
-  name: "temporal_composer_classification_base"
-  description: "3-segment temporal architecture with BiLSTM - Base configuration"
+  name: "temporal_composer_classification"
+  description: "3-segment temporal architecture with BiLSTM"
 
 dataset:
   sample_rate: 22050
   clip_duration_sec: 60  # Each segment is 60s
   hop_length: 512
   n_mels: 128
-  composers: []  # All available composers
-  min_works_per_composer: 20
+  # Optional: Specify composers to include (leave empty for all)
+  composers: []
 
 model:
   architecture: "full"  # Options: "full" or "simple"
@@ -35,7 +36,7 @@ model:
   dropout_rate: 0.4
 
 training:
-  batch_size: 16
+  batch_size: 8
   epochs: 50
   patience: 10  # Early stopping patience
   learning_rate: 0.0001

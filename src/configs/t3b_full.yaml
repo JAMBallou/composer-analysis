@@ -2,13 +2,20 @@
 # t3b_full.yaml
 # -------------------------
 # Configuration for trial 3b: Full set of composers for comprehensive study.
+# Uses 3-segment temporal architecture (start, middle, end) with BiLSTM.
 # 
 
+trial_name: "temporal_trial3b_full"
+
 experiment:
-  trial: "trial3b"
-  description: "Full 14-composer subset with class imbalance"
+  name: "temporal_composer_classification_full"
+  description: "3-segment temporal architecture - Full 14-composer subset"
 
 dataset:
+  sample_rate: 22050
+  clip_duration_sec: 60  # Each segment is 60s
+  hop_length: 512
+  n_mels: 128
   composers:
     - Johann Sebastian Bach
     - Wolfgang Amadeus Mozart
@@ -26,11 +33,48 @@ dataset:
     - Robert Schumann
   min_works_per_composer: 20
 
+model:
+  architecture: "full"  # Options: "full" or "simple"
+  
+  # CNN parameters (for spectrograms)
+  cnn_embedding_dim: 256
+  use_shared_cnn: true  # Share CNN weights across 3 segments
+  
+  # Numerical feature MLP parameters
+  numerical_embedding_dim: 128
+  
+  # BiLSTM parameters
+  lstm_units: 128
+  
+  # Regularization
+  dropout_rate: 0.4
+
 training:
-  epochs: 150  # Extended for 14-class classification task
-  batch_size: 16  # Increased for better gradient estimates with many classes
-  learning_rate: 0.00005  # Lower learning rate for stable convergence
-  early_stopping:
-    patience: 10  # Allow more epochs without improvement
-    min_delta: 0.0005
+  batch_size: 16
+  epochs: 150
+  patience: 10  # Early stopping patience
+  learning_rate: 0.00005
+  optimizer: "adam"
+  
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  # Remaining 0.15 goes to test
+  
+  # Class imbalance handling
   class_weighting: true
+  weight_method: "balanced"  # Options: "balanced" or "inverse_frequency"
+
+# Loss function configuration
+loss:
+  type: "weighted"  # Options: "sparse_categorical_crossentropy", "weighted", "focal"
+  # For focal loss:
+  alpha: 0.25
+  gamma: 2.0
+
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+
+output:
+  model_dir: "outputs/models"
+  results_dir: "outputs/results"

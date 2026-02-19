@@ -3,13 +3,22 @@ extract_audio_features.py
 -------------------------
 Utility to extract features from the MAESTRO audio files and store them as indexed numpy arrays in ``results/features/audio/``.
 
-Audio feature file structure (xxx_mel.npy, xxx_aux.npy):
-- Mel spectrogram (N_MELS x time frames) stored in xxx_mel.npy
-- Auxiliary features (MFCCs, chroma, rhythm) stored in xxx_aux.npy:
-    - MFCCs: mean and std of 13 MFCCs + deltas + delta-deltas (78 values)
-    - Chroma: mean and std of 12 chroma features (24 values)
-    - Rhythm: estimated tempo; onset strength mean and std (3 values)
-    - Total auxiliary feature vector length: 105
+UPDATED: Now extracts 3 temporal segments (start, middle, end) per piece to capture musical structure.
+
+Audio feature file structure:
+- Mel spectrograms (N_MELS x time frames) stored in:
+    - xxx_mel_start.npy (first 60s or proportional segment)
+    - xxx_mel_middle.npy (centered 60s or proportional segment)
+    - xxx_mel_end.npy (last 60s or proportional segment)
+- Auxiliary features stored in:
+    - xxx_aux_start.npy (105 values: MFCCs 78 + chroma 24 + rhythm 3)
+    - xxx_aux_middle.npy
+    - xxx_aux_end.npy
+
+Segmentation strategy:
+- For pieces >= 180s: Extract 3 distinct 60s segments (start: 0-60s, middle: centered, end: last 60s)
+- For pieces 60-180s: Split proportionally into 3 equal segments, then resample each to 60s
+- For pieces < 60s: Rejected from dataset
 """
 
 import os
@@ -24,8 +33,8 @@ from tqdm import tqdm
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATASET_DIR = REPO_ROOT / "data" / "maestro" / "data"
 METADATA_PATH = REPO_ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
-OUTPUT_DIR = REPO_ROOT / "results" / "features" / "audio"
-LABELS_PATH = REPO_ROOT / "results" / "features" / "labels.csv"
+OUTPUT_DIR = REPO_ROOT / "outputs" / "features" / "audio"
+LABELS_PATH = REPO_ROOT / "outputs" / "features" / "labels.csv"
 
 SR = 22050
 N_MELS = 128
@@ -47,19 +56,53 @@ if not METADATA_PATH.exists():
 
 # ================== HELPERS ==================
 
-def load_60s_audio(path):
+def load_3_segment_audio(path):
+    """
+    Load audio and extract 3 temporal segments:
+    - Start: 0-60s
+    - Middle: centered 60s
+    - End: last 60s
+    
+    For pieces < 180s, split proportionally into 3 equal segments.
+    
+    Returns:
+        tuple: (start_segment, middle_segment, end_segment) or None if too short
+    """
     y, sr = librosa.load(path, sr=SR)
     total_samples = int(CLIP_DURATION * SR)
-
-    if len(y) < total_samples:
+    duration_seconds = len(y) / SR
+    
+    # Reject pieces shorter than 60s
+    if duration_seconds < CLIP_DURATION:
         return None
-
-    if len(y) > int(90 * SR):
-        start = int(30 * SR)
+    
+    # Case 1: Long pieces (>= 180s) - extract 3 distinct 60s segments
+    if duration_seconds >= 180:
+        # Start: 0-60s
+        start_segment = y[0:total_samples]
+        
+        # Middle: centered 60s
+        mid_point = len(y) // 2
+        middle_start = max(0, mid_point - total_samples // 2)
+        middle_segment = y[middle_start:middle_start + total_samples]
+        
+        # End: last 60s
+        end_segment = y[-total_samples:]
+        
+    # Case 2: Short pieces (60-180s) - split proportionally into 3 equal segments
     else:
-        start = max(0, len(y) // 2 - total_samples // 2)
-
-    return y[start:start + total_samples]
+        segment_length = len(y) // 3
+        
+        start_segment = y[0:segment_length]
+        middle_segment = y[segment_length:2*segment_length]
+        end_segment = y[2*segment_length:]
+        
+        # Resample each segment to 60s (total_samples) for consistency
+        start_segment = librosa.resample(start_segment, orig_sr=len(start_segment), target_sr=total_samples)
+        middle_segment = librosa.resample(middle_segment, orig_sr=len(middle_segment), target_sr=total_samples)
+        end_segment = librosa.resample(end_segment, orig_sr=len(end_segment), target_sr=total_samples)
+    
+    return (start_segment, middle_segment, end_segment)
 
 def compute_audio_features(y):
     """
@@ -150,16 +193,29 @@ for idx, row in metadata.iterrows():
         continue
 
     try:
-        y = load_60s_audio(str(audio_path))
-        if y is None:
+        segments = load_3_segment_audio(str(audio_path))
+        if segments is None:
             continue
+        
+        start_segment, middle_segment, end_segment = segments
 
-        feats = compute_audio_features(y)
+        # Compute features for each segment
+        feats_start = compute_audio_features(start_segment)
+        feats_middle = compute_audio_features(middle_segment)
+        feats_end = compute_audio_features(end_segment)
 
-        # Save features with 4-digit zero-padded index
+        # Save features with 4-digit zero-padded index and segment suffix
         idx_str = f"{file_index:04d}"
-        np.save(OUTPUT_DIR / f"{idx_str}_mel.npy", feats["mel"])
-        np.save(OUTPUT_DIR / f"{idx_str}_aux.npy", feats["aux"])
+        
+        # Save mel spectrograms
+        np.save(OUTPUT_DIR / f"{idx_str}_mel_start.npy", feats_start["mel"])
+        np.save(OUTPUT_DIR / f"{idx_str}_mel_middle.npy", feats_middle["mel"])
+        np.save(OUTPUT_DIR / f"{idx_str}_mel_end.npy", feats_end["mel"])
+        
+        # Save auxiliary features
+        np.save(OUTPUT_DIR / f"{idx_str}_aux_start.npy", feats_start["aux"])
+        np.save(OUTPUT_DIR / f"{idx_str}_aux_middle.npy", feats_middle["aux"])
+        np.save(OUTPUT_DIR / f"{idx_str}_aux_end.npy", feats_end["aux"])
 
         label_rows.append({
             "id": idx_str,

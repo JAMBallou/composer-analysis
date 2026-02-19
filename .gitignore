@@ -21,9 +21,6 @@ build/
 /data/maestro/data
 /py
 /maestro-v3.0.0.json
-/results/features/mfccs_by_file
-/results/features/audio
-/results/features/midi
 /data/maestro/maestro-v3.0.0.bak.20251223-141456
 /data/maestro/maestro-v3.0.0.bak.csv
 /tests

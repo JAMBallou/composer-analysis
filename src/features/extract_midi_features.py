@@ -3,14 +3,34 @@ extract_midi_features.py
 -------------------------
 Utility to extract features from the MAESTRO MIDI files and store them as indexed numpy arrays in ``results/features/midi/``.
 
-MIDI feature file structure (xxx_midi.npy):
-- Feature vector containing:
-    - PC Histogram (12 values): Note count per pitch class (C through B)
-    - Note Stats (6 values): Mean duration, std duration, staccato ratio, sustained ratio, articulation ratio, legato ratio
-    - Register Usage (5 values): Mean pitch, std pitch, fraction bass notes, fraction middle notes, fraction treble notes
-    - Note Density (3 values): Mean notes/second, mean simultaneous notes, max simultaneous notes
-    - Pedal Usage (3 values): Average sustain pedal value, pedal-on fraction, pedal variance
-    - Total feature vector length: 29
+UPDATED: Now extracts 3 temporal segments (start, middle, end) per piece with ADVANCED harmonic & dynamic features.
+
+MIDI feature file structure:
+- Feature vectors stored in:
+    - xxx_midi_start.npy (64 values from first segment)
+    - xxx_midi_middle.npy (64 values from middle segment)
+    - xxx_midi_end.npy (64 values from end segment)
+    
+- Each vector contains:
+    - Original Features (29):
+        - PC Histogram (12): Note count per pitch class
+        - Note Stats (6): Duration & articulation ratios
+        - Register Usage (5): Pitch statistics
+        - Note Density (3): Temporal density
+        - Pedal Usage (3): Sustain pedal
+    
+    - Advanced Features (35):
+        - Harmonic Movement (8): PC transition matrix statistics
+        - Key Analysis (5): Key clarity, changes, tonal centroid
+        - Intervallic Profile (6): Melodic interval statistics
+        - Dynamics (16): Velocity-based features
+
+Total: 64 features per segment
+
+Segmentation strategy:
+- Matches audio segmentation (180s threshold)
+- For long pieces: 3 distinct 60s segments
+- For short pieces: proportional 3-way split
 """
 
 import os
@@ -21,12 +41,20 @@ import pandas as pd
 from tqdm import tqdm
 import mido
 
+# Import advanced feature functions
+from .advanced_midi_features import (
+    compute_pc_transition_matrix,
+    compute_key_features,
+    compute_intervallic_profile,
+    compute_dynamic_features
+)
+
 # Compute paths relative to repo root (project dir)
 REPO_ROOT = Path(__file__).resolve().parents[2]
 METADATA_PATH = REPO_ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
 DATASET_DIR = REPO_ROOT / "data" / "maestro" / "data"
-OUTPUT_DIR = REPO_ROOT / "results" / "features" / "midi"
-LABELS_PATH = REPO_ROOT / "results" / "features" / "labels.csv"
+OUTPUT_DIR = REPO_ROOT / "outputs" / "features" / "midi"
+LABELS_PATH = REPO_ROOT / "outputs" / "features" / "labels.csv"
 
 # Create output directory
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,6 +69,76 @@ if not METADATA_PATH.exists():
 
 
 # ================== MIDI FEATURE EXTRACTION ==================
+
+def get_segment_boundaries(total_duration, segment_duration=60.0):
+    """
+    Calculate time boundaries for 3 segments matching audio extraction strategy.
+    
+    Args:
+        total_duration: Total duration of piece in seconds
+        segment_duration: Target duration for each segment (default: 60s)
+    
+    Returns:
+        list of tuples: [(start_begin, start_end), (mid_begin, mid_end), (end_begin, end_end)]
+    """
+    if total_duration < segment_duration:
+        return None
+    
+    # Case 1: Long pieces (>= 180s) - extract 3 distinct 60s segments
+    if total_duration >= 180:
+        # Start: 0-60s
+        start_segment = (0.0, segment_duration)
+        
+        # Middle: centered 60s
+        mid_point = total_duration / 2
+        middle_segment = (mid_point - segment_duration/2, mid_point + segment_duration/2)
+        
+        # End: last 60s
+        end_segment = (total_duration - segment_duration, total_duration)
+        
+    # Case 2: Short pieces (60-180s) - split proportionally into 3 equal segments
+    else:
+        segment_length = total_duration / 3
+        start_segment = (0.0, segment_length)
+        middle_segment = (segment_length, 2 * segment_length)
+        end_segment = (2 * segment_length, total_duration)
+    
+    return [start_segment, middle_segment, end_segment]
+
+
+def filter_notes_by_time_range(all_notes, control_changes, time_start, time_end):
+    """
+    Filter notes and control changes to a specific time range.
+    Shifts all timestamps so the segment starts at time 0.
+    
+    Args:
+        all_notes: List of (pitch, start, end, velocity, duration) tuples
+        control_changes: List of (time, value) tuples
+        time_start: Start time of segment
+        time_end: End time of segment
+    
+    Returns:
+        tuple: (filtered_notes, filtered_control_changes)
+    """
+    filtered_notes = []
+    for pitch, start, end, velocity, dur in all_notes:
+        # Include notes that overlap with the segment
+        if start < time_end and end > time_start:
+            # Clip note boundaries to segment
+            clipped_start = max(start, time_start) - time_start
+            clipped_end = min(end, time_end) - time_start
+            clipped_dur = clipped_end - clipped_start
+            
+            if clipped_dur > 0:
+                filtered_notes.append((pitch, clipped_start, clipped_end, velocity, clipped_dur))
+    
+    filtered_control_changes = []
+    for time, value in control_changes:
+        if time_start <= time <= time_end:
+            filtered_control_changes.append((time - time_start, value))
+    
+    return filtered_notes, filtered_control_changes
+
 
 def extract_notes_from_midi(midi_path):
     """
@@ -95,31 +193,20 @@ def extract_notes_from_midi(midi_path):
     return all_notes, control_changes
 
 
-def compute_midi_features(midi_path):
+def compute_midi_features_from_notes(all_notes, control_changes, duration):
     """
-    Extract MIDI features from a MIDI file.
+    Extract MIDI features from a list of notes and control changes.
     
-    Returns a numpy array of shape (29,) with the following features:
-    - PC Histogram (12): Note counts per pitch class
-    - Note Stats (6): Mean/std duration, staccato/sustained/articulation/legato ratios
-    - Register Usage (5): Mean/std pitch, bass/middle/treble fractions
-    - Note Density (3): Mean notes/s, mean simultaneous notes, max simultaneous notes
-    - Pedal Usage (3): Avg sustain value, pedal-on fraction, pedal variance
+    Args:
+        all_notes: List of (pitch, start, end, velocity, duration) tuples
+        control_changes: List of (time, value) tuples for sustain pedal
+        duration: Duration of the segment in seconds
+    
+    Returns:
+        numpy array of shape (29,) with features or None if no notes
     """
-    result = extract_notes_from_midi(midi_path)
-    
-    if result is None:
-        return None
-    
-    all_notes, control_changes = result
-    
     if not all_notes:
         return None
-    
-    # Calculate total duration
-    max_time = max(note[2] for note in all_notes)
-    duration = max_time if max_time > 0 else 1.0
-    
 
     # ===== PC Histogram (12) =====
     pc_histogram = np.zeros(12, dtype=np.float32)
@@ -235,8 +322,8 @@ def compute_midi_features(midi_path):
     ], dtype=np.float32)
     
 
-    # ===== Combine all features =====
-    features = np.concatenate([
+    # ===== Combine all BASIC features =====
+    basic_features = np.concatenate([
         pc_histogram,      # 12
         note_stats,        # 6
         register_usage,    # 5
@@ -244,8 +331,71 @@ def compute_midi_features(midi_path):
         pedal_usage        # 3
     ]).astype(np.float32)
     
-    return features
+    # ===== ADVANCED HARMONIC & DYNAMIC FEATURES =====
+    harmonic_features = compute_pc_transition_matrix(all_notes)
+    key_features = compute_key_features(all_notes, pc_histogram)
+    intervallic_features = compute_intervallic_profile(all_notes)
+    dynamic_features = compute_dynamic_features(all_notes, control_changes, duration)
+    
+    # Combine all features
+    full_features = np.concatenate([
+        basic_features,         # 29
+        harmonic_features,      # 8
+        key_features,           # 5
+        intervallic_features,   # 6
+        dynamic_features        # 16
+    ]).astype(np.float32)
+    
+    return full_features
 
+
+def compute_midi_features_3_segments(midi_path):
+    """
+    Extract MIDI features from 3 temporal segments of a MIDI file.
+    
+    Returns:
+        tuple: (features_start, features_middle, features_end) or None if extraction fails
+        Each features array has shape (29,)
+    """
+    result = extract_notes_from_midi(midi_path)
+    
+    if result is None:
+        return None
+    
+    all_notes, control_changes = result
+    
+    if not all_notes:
+        return None
+    
+    # Calculate total duration
+    max_time = max(note[2] for note in all_notes)
+    total_duration = max_time if max_time > 0 else 1.0
+    
+    # Get segment boundaries
+    segments = get_segment_boundaries(total_duration)
+    
+    if segments is None:
+        return None
+    
+    # Extract features for each segment
+    features_list = []
+    for time_start, time_end in segments:
+        segment_notes, segment_controls = filter_notes_by_time_range(
+            all_notes, control_changes, time_start, time_end
+        )
+        segment_duration = time_end - time_start
+        
+        features = compute_midi_features_from_notes(
+            segment_notes, segment_controls, segment_duration
+        )
+        
+        if features is None:
+            # If one segment has no notes, return zeros
+            features = np.zeros(29, dtype=np.float32)
+        
+        features_list.append(features)
+    
+    return tuple(features_list)
 
 
 def get_midi_path_from_audio_path(audio_filename, metadata_df):
@@ -296,13 +446,17 @@ for idx, row in labels_df.iterrows():
         continue
     
     try:
-        features = compute_midi_features(str(midi_path))
+        features_tuple = compute_midi_features_3_segments(str(midi_path))
         
-        if features is None:
+        if features_tuple is None:
             continue
         
-        # Save features with same ID as audio features
-        np.save(OUTPUT_DIR / f"{file_id}_midi.npy", features)
+        features_start, features_middle, features_end = features_tuple
+        
+        # Save features with same ID as audio features and segment suffix
+        np.save(OUTPUT_DIR / f"{file_id}_midi_start.npy", features_start)
+        np.save(OUTPUT_DIR / f"{file_id}_midi_middle.npy", features_middle)
+        np.save(OUTPUT_DIR / f"{file_id}_midi_end.npy", features_end)
         
     except KeyboardInterrupt:
         raise  # Re-raise keyboard interrupt to allow clean exit

@@ -2,31 +2,65 @@
 # t2_similar.yaml
 # -------------------------
 # Configuration for trial 2: Similar composers from the same period.
+# Uses 3-segment temporal architecture (start, middle, end) with BiLSTM.
 # 
 
+trial_name: "temporal_trial2_similar"
+
 experiment:
-  trial: "trial2"
-  description: "Romantic-period composers with similar style"
+  name: "temporal_composer_classification_similar"
+  description: "3-segment temporal architecture - Chopin vs Schubert"
 
 dataset:
+  sample_rate: 22050
+  clip_duration_sec: 60  # Each segment is 60s
+  hop_length: 512
+  n_mels: 128
   composers: ["Frédéric Chopin", "Franz Schubert"]
   min_works_per_composer: 50
 
 model:
-  audio_cnn:
-    embedding_dim: 256
-    dropout: 0.3  # Match original successful config
-  feature_mlp:
-    embedding_dim: 128
-    hidden_layers: [256, 128]
-    dropout: 0.3  # Match original successful config
-  fusion:
-    hidden_dim: 256
-    dropout: 0.4  # Match original successful config
+  architecture: "full"  # Options: "full" or "simple"
+  
+  # CNN parameters (for spectrograms)
+  cnn_embedding_dim: 256
+  use_shared_cnn: true  # Share CNN weights across 3 segments
+  
+  # Numerical feature MLP parameters
+  numerical_embedding_dim: 128
+  
+  # BiLSTM parameters
+  lstm_units: 128
+  
+  # Regularization
+  dropout_rate: 0.4
 
 training:
-  epochs: 50  # Increased from original 35
-  batch_size: 16  # Doubled from original 8 for more stable gradients
-  learning_rate: 0.0001  # Match original successful config (NOT the reduced base.yaml value)
-  early_stopping:
-    enabled: false  # Disable - original didn't use it and worked better
+  batch_size: 16
+  epochs: 50
+  patience: 15  # Early stopping patience
+  learning_rate: 0.0001
+  optimizer: "adam"
+  
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  # Remaining 0.15 goes to test
+  
+  # Class imbalance handling
+  class_weighting: true
+  weight_method: "balanced"  # Options: "balanced" or "inverse_frequency"
+
+# Loss function configuration
+loss:
+  type: "weighted"  # Options: "sparse_categorical_crossentropy", "weighted", "focal"
+  # For focal loss:
+  alpha: 0.25
+  gamma: 2.0
+
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+
+output:
+  model_dir: "outputs/models"
+  results_dir: "outputs/results"

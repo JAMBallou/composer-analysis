@@ -2,6 +2,8 @@
 load_data.py
 ----------
 Load and prepare datasets for training.
+
+Updated: Added temporal 3-segment data loading for new architecture.
 """
 
 import numpy as np
@@ -10,6 +12,256 @@ from pathlib import Path
 import pandas as pd
 from sklearn.utils.class_weight import compute_class_weight
 from ..utils.losses import compute_class_weights_balanced, compute_class_weights_inverse_frequency
+
+
+def resolve_features_dir(repo_root, config):
+    """Resolve features directory with a fallback to outputs/features."""
+
+    config_dir = config.get("dataset", {}).get("features_dir")
+    if config_dir:
+        return Path(config_dir)
+
+    candidates = [repo_root / "results" / "features", repo_root / "outputs" / "features"]
+    for candidate in candidates:
+        if (candidate / "labels.csv").exists():
+            return candidate
+
+    return candidates[0]
+
+
+def get_temporal_datasets(config, batch_size=None):
+    """
+    Loads 3-segment temporal features (start, middle, end) for audio and MIDI.
+    
+    Returns datasets formatted for temporal multimodal model:
+    - Spectrograms: 3 inputs (start, middle, end)
+    - Numerical features: 3 inputs (aux+MIDI for start, middle, end)
+    
+    Args:
+        config (dict): Configuration dictionary from load_experiment_config()
+        batch_size (int): Batch size for datasets. If None, uses config["training"]["batch_size"]
+    
+    Returns:
+        tuple: (train_ds, val_ds, test_ds, metadata)
+    """
+    
+    if batch_size is None:
+        batch_size = config["training"].get("batch_size", 32)
+    
+    # Paths
+    repo_root = Path(__file__).resolve().parents[2]
+    features_dir = resolve_features_dir(repo_root, config)
+    labels_path = features_dir / "labels.csv"
+    
+    # Load labels
+    labels_df = pd.read_csv(labels_path, encoding='utf-8')
+    print(f"Total samples in labels.csv: {len(labels_df)}")
+    
+    # Filter composers if specified
+    if "dataset" in config and "composers" in config["dataset"]:
+        config_composers = config["dataset"]["composers"]
+        labels_df = labels_df[labels_df["composer"].isin(config_composers)]
+        print(f"Filtered to {len(labels_df)} samples")
+    
+    # Create label mapping
+    composers = sorted(labels_df["composer"].unique())
+    print(f"Composers: {composers}")
+    composer_to_idx = {c: i for i, c in enumerate(composers)}
+    labels_df["label"] = labels_df["composer"].map(composer_to_idx)
+    
+    # Load 3-segment features
+    spec_start_list, spec_middle_list, spec_end_list = [], [], []
+    aux_start_list, aux_middle_list, aux_end_list = [], [], []
+    midi_start_list, midi_middle_list, midi_end_list = [], [], []
+    labels = []
+    missing_count = 0
+    
+    segments = ["start", "middle", "end"]
+    
+    for idx, (_, row) in enumerate(labels_df.iterrows()):
+        file_id = str(row["id"]).zfill(4)
+        
+        # Check all required files exist
+        required_files = []
+        for seg in segments:
+            required_files.append(features_dir / "audio" / f"{file_id}_mel_{seg}.npy")
+            required_files.append(features_dir / "audio" / f"{file_id}_aux_{seg}.npy")
+            required_files.append(features_dir / "midi" / f"{file_id}_midi_{seg}.npy")
+        
+        if not all(f.exists() for f in required_files):
+            missing_count += 1
+            if missing_count <= 3:
+                print(f"Warning: Missing files for {file_id}")
+            continue
+        
+        try:
+            # Load spectrograms
+            spec_start = np.load(features_dir / "audio" / f"{file_id}_mel_start.npy")
+            spec_middle = np.load(features_dir / "audio" / f"{file_id}_mel_middle.npy")
+            spec_end = np.load(features_dir / "audio" / f"{file_id}_mel_end.npy")
+            
+            # Load auxiliary features
+            aux_start = np.load(features_dir / "audio" / f"{file_id}_aux_start.npy")
+            aux_middle = np.load(features_dir / "audio" / f"{file_id}_aux_middle.npy")
+            aux_end = np.load(features_dir / "audio" / f"{file_id}_aux_end.npy")
+            
+            # Load MIDI features
+            midi_start = np.load(features_dir / "midi" / f"{file_id}_midi_start.npy")
+            midi_middle = np.load(features_dir / "midi" / f"{file_id}_midi_middle.npy")
+            midi_end = np.load(features_dir / "midi" / f"{file_id}_midi_end.npy")
+            
+            # Append to lists
+            spec_start_list.append(spec_start)
+            spec_middle_list.append(spec_middle)
+            spec_end_list.append(spec_end)
+            
+            aux_start_list.append(aux_start)
+            aux_middle_list.append(aux_middle)
+            aux_end_list.append(aux_end)
+            
+            midi_start_list.append(midi_start)
+            midi_middle_list.append(midi_middle)
+            midi_end_list.append(midi_end)
+            
+            labels.append(row["label"])
+            
+        except Exception as e:
+            print(f"Error loading {file_id}: {e}")
+            continue
+    
+    if len(labels) == 0:
+        raise ValueError("No valid temporal features found!")
+    
+    # Convert to arrays
+    X_spec_start = np.array(spec_start_list)
+    X_spec_middle = np.array(spec_middle_list)
+    X_spec_end = np.array(spec_end_list)
+    
+    X_aux_start = np.array(aux_start_list)
+    X_aux_middle = np.array(aux_middle_list)
+    X_aux_end = np.array(aux_end_list)
+    
+    X_midi_start = np.array(midi_start_list)
+    X_midi_middle = np.array(midi_middle_list)
+    X_midi_end = np.array(midi_end_list)
+    
+    y = np.array(labels)
+    
+    print(f"\n=== Temporal Data Shapes ===")
+    print(f"Spectrograms: {X_spec_start.shape}")
+    print(f"Aux features: {X_aux_start.shape}")
+    print(f"MIDI features: {X_midi_start.shape}")
+    print(f"Labels: {y.shape}, unique: {np.unique(y)}")
+    
+    # Add channel dimension to spectrograms if needed
+    if len(X_spec_start.shape) == 3:
+        X_spec_start = X_spec_start[..., np.newaxis]
+        X_spec_middle = X_spec_middle[..., np.newaxis]
+        X_spec_end = X_spec_end[..., np.newaxis]
+    
+    # Normalize spectrograms (in-place to avoid loop reassignment bug)
+    X_spec_start = X_spec_start.astype(np.float32)
+    X_spec_middle = X_spec_middle.astype(np.float32)
+    X_spec_end = X_spec_end.astype(np.float32)
+    
+    mean_start, std_start = X_spec_start.mean(), X_spec_start.std()
+    X_spec_start = (X_spec_start - mean_start) / (std_start + 1e-8)
+    
+    mean_middle, std_middle = X_spec_middle.mean(), X_spec_middle.std()
+    X_spec_middle = (X_spec_middle - mean_middle) / (std_middle + 1e-8)
+    
+    mean_end, std_end = X_spec_end.mean(), X_spec_end.std()
+    X_spec_end = (X_spec_end - mean_end) / (std_end + 1e-8)
+    
+    # Normalize numerical features (in-place)
+    X_aux_start = X_aux_start.astype(np.float32)
+    X_aux_start = (X_aux_start - X_aux_start.mean(axis=0)) / (X_aux_start.std(axis=0) + 1e-8)
+    
+    X_aux_middle = X_aux_middle.astype(np.float32)
+    X_aux_middle = (X_aux_middle - X_aux_middle.mean(axis=0)) / (X_aux_middle.std(axis=0) + 1e-8)
+    
+    X_aux_end = X_aux_end.astype(np.float32)
+    X_aux_end = (X_aux_end - X_aux_end.mean(axis=0)) / (X_aux_end.std(axis=0) + 1e-8)
+    
+    X_midi_start = X_midi_start.astype(np.float32)
+    X_midi_start = (X_midi_start - X_midi_start.mean(axis=0)) / (X_midi_start.std(axis=0) + 1e-8)
+    
+    X_midi_middle = X_midi_middle.astype(np.float32)
+    X_midi_middle = (X_midi_middle - X_midi_middle.mean(axis=0)) / (X_midi_middle.std(axis=0) + 1e-8)
+    
+    X_midi_end = X_midi_end.astype(np.float32)
+    X_midi_end = (X_midi_end - X_midi_end.mean(axis=0)) / (X_midi_end.std(axis=0) + 1e-8)
+    
+    # Combine aux + MIDI for each segment
+    # Note: MIDI features expanded from 29 to 64 with advanced features
+    X_num_start = np.concatenate([X_aux_start, X_midi_start], axis=1)
+    X_num_middle = np.concatenate([X_aux_middle, X_midi_middle], axis=1)
+    X_num_end = np.concatenate([X_aux_end, X_midi_end], axis=1)
+    
+    print(f"Combined numerical features shape: {X_num_start.shape}")
+    print(f"  Audio aux: {X_aux_start.shape[1]} features")
+    print(f"  MIDI (29 basic + 35 advanced): {X_midi_start.shape[1]} features")
+    
+    # Train/val/test split
+    train_split = config["training"].get("train_split", 0.7)
+    val_split = config["training"].get("val_split", 0.15)
+    
+    n_samples = len(y)
+    n_train = int(n_samples * train_split)
+    n_val = int(n_samples * val_split)
+    
+    indices = np.arange(n_samples)
+    np.random.shuffle(indices)
+    
+    train_idx = indices[:n_train]
+    val_idx = indices[n_train:n_train + n_val]
+    test_idx = indices[n_train + n_val:]
+    
+    # Compute class weights
+    class_weights = None
+    if config["training"].get("class_weighting", False):
+        weight_method = config["training"].get("weight_method", "balanced")
+        y_train = y[train_idx]
+        
+        if weight_method == "inverse_frequency":
+            class_weights = compute_class_weights_inverse_frequency(y_train)
+        else:
+            class_weights = compute_class_weights_balanced(y_train)
+        
+        print(f"Class weights ({weight_method}): {class_weights}")
+    
+    # Create datasets
+    def create_temporal_dataset(idx):
+        inputs = {
+            'spec_start': X_spec_start[idx],
+            'spec_middle': X_spec_middle[idx],
+            'spec_end': X_spec_end[idx],
+            'num_feat_start': X_num_start[idx],
+            'num_feat_middle': X_num_middle[idx],
+            'num_feat_end': X_num_end[idx]
+        }
+        dataset = tf.data.Dataset.from_tensor_slices((inputs, y[idx]))
+        dataset = dataset.shuffle(len(idx))
+        dataset = dataset.batch(batch_size)
+        dataset = dataset.prefetch(tf.data.AUTOTUNE)
+        return dataset
+    
+    train_ds = create_temporal_dataset(train_idx)
+    val_ds = create_temporal_dataset(val_idx)
+    test_ds = create_temporal_dataset(test_idx)
+    
+    # Metadata
+    metadata = {
+        "num_classes": len(composers),
+        "class_names": composers,
+        "mel_bins": X_spec_start.shape[1],
+        "time_frames": X_spec_start.shape[2],
+        "num_aux_features": X_aux_start.shape[1],
+        "num_midi_features": X_midi_start.shape[1],
+        "class_weights": class_weights,
+    }
+    
+    return train_ds, val_ds, test_ds, metadata
 
 
 def get_datasets(config, batch_size=None):
@@ -31,7 +283,7 @@ def get_datasets(config, batch_size=None):
     
     # Paths
     repo_root = Path(__file__).resolve().parents[2]
-    features_dir = repo_root / "results" / "features"
+    features_dir = resolve_features_dir(repo_root, config)
     labels_path = features_dir / "labels.csv"
     
     # Load labels with UTF-8 encoding

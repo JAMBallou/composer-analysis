@@ -2,13 +2,20 @@
 # t3a_subset.yaml
 # -------------------------
 # Configuration for trial 3a: Subset of composers for focused study.
+# Uses 3-segment temporal architecture (start, middle, end) with BiLSTM.
 # 
 
+trial_name: "temporal_trial3a_subset"
+
 experiment:
-  trial: "trial3a"
-  description: "Five composers with >100 works"
+  name: "temporal_composer_classification_subset"
+  description: "3-segment temporal architecture - Five composers with >100 works"
 
 dataset:
+  sample_rate: 22050
+  clip_duration_sec: 60  # Each segment is 60s
+  hop_length: 512
+  n_mels: 128
   composers:
     - Frédéric Chopin
     - Franz Schubert
@@ -17,10 +24,48 @@ dataset:
     - Franz Liszt
   min_works_per_composer: 100
 
+model:
+  architecture: "full"  # Options: "full" or "simple"
+  
+  # CNN parameters (for spectrograms)
+  cnn_embedding_dim: 256
+  use_shared_cnn: true  # Share CNN weights across 3 segments
+  
+  # Numerical feature MLP parameters
+  numerical_embedding_dim: 128
+  
+  # BiLSTM parameters
+  lstm_units: 128
+  
+  # Regularization
+  dropout_rate: 0.4
+
 training:
+  batch_size: 24
   epochs: 100
-  batch_size: 24  # Increased from 16 for more stable gradients
+  patience: 20  # Early stopping patience
   learning_rate: 0.00005
-  early_stopping:
-    patience: 20  # Increased from 10 to allow learning through noisy periods
-    min_delta: 0.0003  # Lowered from 0.0005 for more sensitive detection
+  optimizer: "adam"
+  
+  # Data splits
+  train_split: 0.7
+  val_split: 0.15
+  # Remaining 0.15 goes to test
+  
+  # Class imbalance handling
+  class_weighting: true
+  weight_method: "balanced"  # Options: "balanced" or "inverse_frequency"
+
+# Loss function configuration
+loss:
+  type: "weighted"  # Options: "sparse_categorical_crossentropy", "weighted", "focal"
+  # For focal loss:
+  alpha: 0.25
+  gamma: 2.0
+
+evaluation:
+  metrics: ["accuracy", "precision", "recall", "f1", "confusion_matrix"]
+
+output:
+  model_dir: "outputs/models"
+  results_dir: "outputs/results"
