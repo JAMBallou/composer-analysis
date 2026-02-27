@@ -35,8 +35,11 @@ def weighted_sparse_categorical_crossentropy(class_weights: Optional[Dict[int, f
     """
     
     def loss(y_true, y_pred):
+        # Cast labels to int32 for sparse_softmax_cross_entropy_with_logits
+        y_true_int = tf.cast(y_true, tf.int32)
+        
         # Get unweighted crossentropy loss
-        base_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_true, logits=y_pred)
+        base_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y_true_int, logits=y_pred)
         
         if class_weights is None:
             return tf.reduce_mean(base_loss)
@@ -44,7 +47,7 @@ def weighted_sparse_categorical_crossentropy(class_weights: Optional[Dict[int, f
         # Apply class weights
         weights = tf.gather(
             tf.constant([class_weights.get(i, 1.0) for i in range(len(class_weights))]),
-            y_true
+            y_true_int
         )
         weighted_loss = base_loss * weights
         
