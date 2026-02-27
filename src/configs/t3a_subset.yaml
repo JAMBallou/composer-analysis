@@ -46,6 +46,7 @@ training:
   patience: 20  # Early stopping patience
   learning_rate: 0.00005
   optimizer: "adam"
+  k_folds: 5  # 5-fold cross-validation
   
   # Data splits
   train_split: 0.7

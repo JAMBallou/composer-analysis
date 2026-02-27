@@ -30,6 +30,7 @@ training:
   patience: 8
   learning_rate: 0.001  # Higher LR for simple model
   optimizer: "adam"
+  k_folds: 5  # 5-fold cross-validation
   
   train_split: 0.7
   val_split: 0.15
