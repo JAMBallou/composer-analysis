@@ -130,7 +130,10 @@ def get_temporal_datasets(config, batch_size=None):
             continue
     
     if len(labels) == 0:
-        raise ValueError("No valid temporal features found!")
+        raise ValueError(
+            "No valid temporal features found. Check that the feature files exist in the "
+            "expected outputs/features structure and match the temporal naming scheme."
+        )
     
     # Convert to arrays
     X_spec_start = np.array(spec_start_list)
@@ -289,13 +292,20 @@ def load_temporal_features_raw(config):
     
     # Load labels
     labels_df = pd.read_csv(labels_path, encoding='utf-8')
+    print(f"\n{'='*80}")
+    print("TEMPORAL FEATURES LOADING")
+    print(f"{'='*80}")
     print(f"Total samples in labels.csv: {len(labels_df)}")
     
     # Filter composers if specified
     if "dataset" in config and "composers" in config["dataset"]:
         config_composers = config["dataset"]["composers"]
+        print(f"\nComposer filter requested: {config_composers}")
+        for comp in config_composers:
+            count = len(labels_df[labels_df["composer"] == comp])
+            print(f"  - {comp}: {count} samples")
         labels_df = labels_df[labels_df["composer"].isin(config_composers)]
-        print(f"Filtered to {len(labels_df)} samples")
+        print(f"\nAfter composer filtering: {len(labels_df)} total samples")
     
     # Create label mapping
     composers = sorted(labels_df["composer"].unique())
@@ -309,11 +319,16 @@ def load_temporal_features_raw(config):
     midi_start_list, midi_middle_list, midi_end_list = [], [], []
     labels = []
     missing_count = 0
+    loaded_count = 0
+    missing_by_composer = {}
+    loaded_by_composer = {c: 0 for c in composers}
     
     segments = ["start", "middle", "end"]
     
+    print(f"\nLoading feature files...")
     for idx, (_, row) in enumerate(labels_df.iterrows()):
         file_id = str(row["id"]).zfill(4)
+        composer = row["composer"]
         
         # Check all required files exist
         required_files = []
@@ -324,8 +339,11 @@ def load_temporal_features_raw(config):
         
         if not all(f.exists() for f in required_files):
             missing_count += 1
+            if composer not in missing_by_composer:
+                missing_by_composer[composer] = 0
+            missing_by_composer[composer] += 1
             if missing_count <= 3:
-                print(f"Warning: Missing files for {file_id}")
+                print(f"  Warning: Missing files for {file_id} ({composer})")
             continue
         
         try:
@@ -358,6 +376,8 @@ def load_temporal_features_raw(config):
             midi_end_list.append(midi_end)
             
             labels.append(row["label"])
+            loaded_count += 1
+            loaded_by_composer[composer] += 1
             
         except Exception as e:
             print(f"Error loading {file_id}: {e}")
@@ -365,6 +385,19 @@ def load_temporal_features_raw(config):
     
     if len(labels) == 0:
         raise ValueError("No valid temporal features found!")
+    
+    # Print loading summary
+    print(f"\nFeature loading complete:")
+    print(f"  Successfully loaded: {loaded_count}")
+    print(f"  Missing files: {missing_count}")
+    print(f"  Failed to load: {len(labels_df) - loaded_count - missing_count}")
+    
+    if loaded_by_composer:
+        print(f"\nLoaded samples per composer:")
+        for composer in sorted(loaded_by_composer.keys()):
+            loaded = loaded_by_composer[composer]
+            missing = missing_by_composer.get(composer, 0)
+            print(f"  - {composer}: {loaded} loaded, {missing} missing")
     
     # Convert to arrays
     X_spec_start = np.array(spec_start_list)
