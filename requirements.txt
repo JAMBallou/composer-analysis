@@ -1,12 +1,14 @@
-numpy
-pandas
-pretty_midi
-librosa
-tensorflow
-keras
-seaborn
-matplotlib
-argparse
-pathlib
-typing
-tqdm
+numpy           # Fundamental package for scientific computing
+pandas          # Data manipulation and analysis (dataframes), used to load dataset from CSV
+pretty_midi     # For handling MIDI data and extracting features from MIDI files
+librosa         # For audio processing and feature extraction from audio files
+tensorflow      # ML platform
+keras           # High-level API for building neural networks with tf
+seaborn         # For data visualization
+matplotlib      # For plotting and visualization
+argparse        # For command-line argument parsing
+pathlib         # For filesystem path manipulation
+typing          # For type hints
+tqdm            # For progress bars
+nvidia-ml-py3   # For GPU memory monitoring
+pynvml          # Alternative NVIDIA management library

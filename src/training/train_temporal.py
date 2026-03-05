@@ -17,17 +17,14 @@ from pathlib import Path
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
 
-# Enable mixed precision for GPU
+# Configure GPU for optimal performance
 try:
-    gpus = tf.config.list_physical_devices('GPU')
-    if gpus:
-        policy = tf.keras.mixed_precision.Policy('mixed_float16')
-        tf.keras.mixed_precision.set_global_policy(policy)
-        print(f"✓ Mixed precision enabled on {len(gpus)} GPU(s)")
-    else:
-        print("CPU-only training - using float32")
+    from ..utils.gpu_config import auto_configure_gpu
+    gpu_config = auto_configure_gpu(verbose=True)
 except Exception as e:
-    print(f"Note: Mixed precision not enabled - {e}")
+    print(f"⚠️  GPU configuration error: {e}")
+    print("   Proceeding with default TensorFlow settings...")
+    gpu_config = {'gpus_configured': []}
 
 # Imports
 if __name__ == "__main__" and __package__ is None:
@@ -212,6 +209,12 @@ def evaluate_model(model, test_ds, class_names):
     return metrics
 
 
+def get_trial_id(trial_name: str) -> str:
+    if trial_name.startswith("temporal_"):
+        trial_name = trial_name.replace("temporal_", "", 1)
+    return trial_name.split("_", 1)[0]
+
+
 def save_fold_results(model, metrics, config, metadata, run_dir, fold_num, class_names):
     """Save fold-specific model, metrics, and confusion matrix."""
     
@@ -228,18 +231,14 @@ def save_fold_results(model, metrics, config, metadata, run_dir, fold_num, class
     
     # Generate filename
     trial_name = config.get("trial_name", "temporal_trial")
-    # Extract just the trial identifier (e.g., "trial1" from "temporal_trial1_contrasting")
-    if trial_name.startswith("temporal_"):
-        trial_id = trial_name.replace("temporal_", "")
-    else:
-        trial_id = trial_name
+    trial_id = get_trial_id(trial_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_name = f"{trial_id}_fold{fold_num}_{timestamp}"
     
     # Save model
     model_path = models_base / f"{base_name}.keras"
     model.save(model_path)
-    print(f"  ✓ Model saved: {model_path}")
+    print(f"  + Model saved: {model_path}")
     
     # Save fold metrics
     metrics_to_save = {k: v for k, v in metrics.items() if k != "confusion_matrix"}
@@ -274,11 +273,7 @@ def save_model_and_results(model, metrics, config, metadata, fold_num=None):
     
     # Generate filename
     trial_name = config.get("trial_name", "temporal_trial")
-    # Extract just the trial identifier (e.g., "trial1" from "temporal_trial1_contrasting")
-    if trial_name.startswith("temporal_"):
-        trial_id = trial_name.replace("temporal_", "")
-    else:
-        trial_id = trial_name
+    trial_id = get_trial_id(trial_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
     if fold_num is not None:
@@ -289,7 +284,7 @@ def save_model_and_results(model, metrics, config, metadata, fold_num=None):
     # Save model
     model_path = models_dir / f"{base_name}.keras"
     model.save(model_path)
-    print(f"\n✓ Model saved: {model_path}")
+    print(f"\n+ Model saved: {model_path}")
     
     # Save results
     results = {
@@ -305,7 +300,7 @@ def save_model_and_results(model, metrics, config, metadata, fold_num=None):
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
     
-    print(f"✓ Results saved: {results_path}")
+    print(f"+ Results saved: {results_path}")
     
     return model_path, results_path
 
@@ -319,7 +314,7 @@ def main(config_path):
     
     # Load config
     config = load_experiment_config(config_path)
-    print(f"\n✓ Loaded config: {config_path}")
+    print(f"\n+ Loaded config: {config_path}")
     print(f"  Trial name: {config.get('trial_name', 'unnamed')}")
     
     # Check if k-fold CV is enabled
@@ -327,10 +322,10 @@ def main(config_path):
     use_kfold = k_folds > 1
     
     if use_kfold:
-        print(f"\n✓ K-Fold Cross-Validation enabled: {k_folds} folds")
+        print(f"\n+ K-Fold Cross-Validation enabled: {k_folds} folds")
         return main_kfold(config_path, k_folds)
     else:
-        print(f"\n✓ Single fold training (no cross-validation)")
+        print(f"\n+ Single fold training (no cross-validation)")
         return main_single_fold(config_path)
 
 
@@ -347,7 +342,7 @@ def main_single_fold(config_path):
     
     train_ds, val_ds, test_ds, metadata = get_temporal_datasets(config)
     
-    print(f"\n✓ Datasets loaded")
+    print(f"\n+ Datasets loaded")
     print(f"  Classes: {metadata['num_classes']}")
     print(f"  Mel bins: {metadata['mel_bins']}")
     print(f"  Time frames: {metadata['time_frames']}")
@@ -362,7 +357,7 @@ def main_single_fold(config_path):
     model = build_model_from_config(config, metadata)
     model = compile_model(model, config, class_weights=metadata.get("class_weights"))
     
-    print(f"\n✓ Model built and compiled")
+    print(f"\n+ Model built and compiled")
     print(f"  Parameters: {model.count_params():,}")
     
     # Print model summary
@@ -395,9 +390,9 @@ def main_single_fold(config_path):
     print("\n" + "="*80)
     print("TRAINING COMPLETE")
     print("="*80)
-    print(f"✓ Model: {model_path}")
-    print(f"✓ Results: {results_path}")
-    print(f"✓ Test Accuracy: {metrics['accuracy']:.4f}")
+    print(f"+ Model: {model_path}")
+    print(f"+ Results: {results_path}")
+    print(f"+ Test Accuracy: {metrics['accuracy']:.4f}")
     
     return model, metrics
 
@@ -412,17 +407,13 @@ def main_kfold(config_path, k_folds):
     repo_root = Path(__file__).resolve().parents[2]
     output_dir = repo_root / "outputs"
     trial_name = config.get("trial_name", "temporal_trial")
-    # Extract just the trial identifier (e.g., "trial1" from "temporal_trial1_contrasting")
-    if trial_name.startswith("temporal_"):
-        trial_id = trial_name.replace("temporal_", "")
-    else:
-        trial_id = trial_name
+    trial_id = get_trial_id(trial_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     run_name = f"{trial_id}_{timestamp}"
     run_dir = output_dir / "results" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"\n✓ K-Fold CV run directory: {run_dir}")
+    print(f"\n+ K-Fold CV run directory: {run_dir}")
     
     # Load full dataset (without splitting into train/val/test)
     print("\n" + "="*80)
@@ -432,9 +423,15 @@ def main_kfold(config_path, k_folds):
     # Load raw data for stratified k-fold split
     temporal_data, y, metadata = load_temporal_features_raw(config)
     
-    print(f"\n✓ Datasets loaded")
+    if len(y) == 0:
+        raise ValueError(
+            "No temporal samples loaded. Verify feature extraction output and composer filters."
+        )
+
+    print(f"\n+ Datasets loaded")
     print(f"  Total samples: {len(y)}")
     print(f"  Classes: {metadata['num_classes']}")
+    print(f"  Samples per class: {np.bincount(y, minlength=metadata['num_classes'])}")
     print(f"  Spectrogram shape per segment: {temporal_data['spec_start'].shape}")
     print(f"  Features shape per segment: {temporal_data['num_start'].shape}")
     
@@ -641,7 +638,7 @@ def main_kfold(config_path, k_folds):
     with open(run_dir / "avg_confusion_matrix.json", "w") as f:
         json.dump(avg_cm_labeled, f, indent=2)
     
-    print(f"\n✓ All results saved to: {run_dir}")
+    print(f"\n+ All results saved to: {run_dir}")
     
     return run_dir, aggregated_metrics
 

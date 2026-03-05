@@ -15,19 +15,16 @@ import tensorflow as tf
 from datetime import datetime
 from pathlib import Path
 
-# Enable mixed precision training for GPU acceleration (only on GPU)
-# CPU + float16 is VERY slow without AVX-512 support
+# Configure GPU for optimal performance
+# This must happen before any TensorFlow operations
 try:
-    gpus = tf.config.list_physical_devices('GPU')
-    if gpus:
-        # Only enable mixed precision if GPU is available
-        policy = tf.keras.mixed_precision.Policy('mixed_float16')
-        tf.keras.mixed_precision.set_global_policy(policy)
-        print(f"✓ Mixed precision training enabled (float16) on {len(gpus)} GPU(s)")
-    else:
-        print("CPU-only training detected - using float32 (faster without AVX-512 GPU support)")
+    # Import GPU configuration utility
+    from ..utils.gpu_config import auto_configure_gpu
+    gpu_config = auto_configure_gpu(verbose=True)
 except Exception as e:
-    print(f"Note: Could not enable mixed precision - {e}")
+    print(f"⚠️  GPU configuration error: {e}")
+    print("   Proceeding with default TensorFlow settings...")
+    gpu_config = {'gpus_configured': []}
 
 from sklearn.metrics import (
     accuracy_score,
@@ -73,7 +70,7 @@ def load_all_features(config):
     
     # Paths
     repo_root = Path(__file__).resolve().parents[2]
-    features_dir = repo_root / "results" / "features"
+    features_dir = repo_root / "outputs" / "features"
     labels_path = features_dir / "labels.csv"
     
     # Load labels
@@ -114,7 +111,7 @@ def load_all_features(config):
     # Convert to arrays
     X_audio = np.array(audio_features)
     X_midi = np.array(midi_features)
-    y = np.array(labels)
+    y = np.array(labels, dtype=np.int64)
     
     # Ensure 4D shape for audio
     if len(X_audio.shape) == 3:
@@ -139,8 +136,23 @@ def load_all_features(config):
 
 # ===== Load Config & Setup Directories =====
 
+def get_trial_id(config):
+    experiment = config.get("experiment", {})
+    trial = experiment.get("trial")
+    if trial:
+        return trial
+
+    trial_name = config.get("trial_name")
+    if trial_name:
+        if trial_name.startswith("temporal_"):
+            trial_name = trial_name.replace("temporal_", "", 1)
+        return trial_name.split("_", 1)[0]
+
+    return "trial"
+
+
 def setup_run_dirs(config):
-    trial = config["experiment"]["trial"]
+    trial = get_trial_id(config)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     run_name = f"{trial}_{timestamp}"
@@ -343,7 +355,7 @@ def evaluate_model(model, test_ds, run_dir, class_names):
 
 def save_model(model, run_dir, config):
     """Save the trained model to outputs/models directory."""
-    trial = config["experiment"]["trial"]
+    trial = get_trial_id(config)
     timestamp = os.path.basename(run_dir).split('_', 1)[-1]  # Extract timestamp from run_dir
     model_name = f"{trial}_{timestamp}.keras"
     
@@ -392,9 +404,15 @@ def train_with_kfold(config, run_dir):
     feature_dim = metadata["feature_dim"]
     audio_shape = metadata["audio_shape"]
     
+    if len(y) == 0:
+        raise ValueError(
+            "No samples loaded from features. Check that the feature files exist and match "
+            "the expected naming scheme, or use the temporal training pipeline for temporal configs."
+        )
+
     print(f"Total samples: {len(y)}")
     print(f"Classes: {class_names}")
-    print(f"Samples per class: {np.bincount(y)}\n")
+    print(f"Samples per class: {np.bincount(y, minlength=num_classes)}\n")
     
     # K-Fold split (stratified to maintain class balance)
     kfold = StratifiedKFold(n_splits=n_folds, shuffle=True, random_state=42)
