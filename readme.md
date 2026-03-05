@@ -1,4 +1,20 @@
-# Algorithmic Classification of Classical Piano Music by Composer
+<div id="toc"> 
+    <ul style="list-style: none">
+        <summary>
+            <h1>Algorithmic Classification of Classical Piano Music by Composer</h1>
+        </summary>
+    </ul>
+</div>
+
+<div id="toc"> 
+    <ul style="list-style: none">
+        <summary>
+            <h2>A Multimodal Neural Network to Learn Stylistic Signatures from Spectral and Numerical Representations of the MAESTRO Dataset</h2>
+        </summary>
+    </ul>
+</div>
+
+>### Jamison Ballou
 
 ## Quickstart — Transferring Project to a New PC
 
