@@ -29,6 +29,7 @@ def load_experiment_config(trial_path):
     base_path = config_dir / "base.yaml"
     
     # Handle trial_path - convert to absolute if relative
+    trial_path = str(trial_path).strip().rstrip(";")
     trial_path = Path(trial_path)
     if not trial_path.is_absolute():
         # First check if it's relative to the config directory
