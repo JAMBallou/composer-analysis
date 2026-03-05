@@ -1,5 +1,26 @@
 # Algorithmic Classification of Classical Piano Music by Composer
 
+## Quickstart — Transferring Project to a New PC
+
+1. Install python: <https://www.python.org/downloads/>
+    a. Verify with ``python --version``
+2. Download repo from <https://github.com/JAMBallou/composer-analysis>
+3. Download MAESTRO dataset at <https://magenta.withgoogle.com/datasets/maestro#dataset>, should go to ``data/maestro/``.
+4. Create virtual environment: ``python -m venv .venv``
+    a. Activate using ``.venv/Scripts/activate``
+5. Install dependencies: ``pip install -r requirements.txt``
+    a. If [using GPU](https://www.tensorflow.org/install/pip), also run ``pip install tensorflow[and-cuda]``
+    b. Verify: ``python3 -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"``
+6. Filter composers (``python -m src.preprocessing.filter_composers --top-n 12 --deduplicate best_quality --delete --update_csv --backup_csv``).
+7. Extract MIDI features  (``python -m src.features.extract_midi_features``).
+8. Extract audio features  (``python -m src.features.extract_audio_features``).
+9. Test GPU setup:
+    a. ``nvidia-smi`` ([NVIDIA GPU driver](https://www.nvidia.com/download/index.aspx))
+    b. ``nvcc --version`` ([CUDA](https://developer.nvidia.com/cuda-downloads))
+    c. Install ``cuDNN`` ([cuDNN](https://developer.nvidia.com/cudnn))
+    d. Test config: ``python -m src.utils.gpu_config``
+10. Temporal training (uses BiLSTM models): ``python -m src.training.train_temporal src/configs/temporal_base.yaml``
+
 The following has been taken from my proposed research plan applying to the [Massachusetts Science and Engineering Fair (MSEF)](https://scifair.com/).
 
 ## Rationale (Problem)
@@ -50,7 +71,7 @@ I. **Preprocessing** - In this stage, the data will be processed to remove unwan
 3. The 14 composers with more than 25 works in the MAESTRO Dataset, ordered by number of works:
 
 | **Composer** | **Number of Works in Dataset** |
-|----------|-------|
+| ---------- | ------- |
 | *Frédéric Chopin* | 201 |
 | *Franz Schubert* | 186 |
 | *Ludwig van Beethoven* | 146 |
