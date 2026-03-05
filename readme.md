@@ -1,16 +1,14 @@
-<div id="toc"> 
-    <ul style="list-style: none" align="center">
-        <summary>
-            <h1>Algorithmic Classification of Classical Piano Music by Composer:</h1>
-            <h2>A Multimodal Neural Network to Learn Stylistic Signatures from Spectral and Numerical Representations of the MAESTRO Dataset</h2>
-            <ul align="center">
-                <h2 >Jamison Ballou</h2>
-            </ul>
-        </summary>
-    </ul>
+<div align="center">
+
+# Algorithmic Classification of Classical Piano Music by Composer
+
+### A Multimodal Neural Network to Learn Stylistic Signatures from Spectral and Numerical Representations of the MAESTRO Dataset
+
+**Jamison Ballou**
+
+---
+
 </div>
-<br>
-<br>
 
 ## Quickstart — Transferring Project to a New PC
 
