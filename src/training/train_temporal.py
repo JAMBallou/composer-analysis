@@ -9,7 +9,6 @@ python -m src.training.train_temporal configs/[config].yaml
 
 import os
 import json
-import yaml
 import numpy as np
 import tensorflow as tf
 from datetime import datetime

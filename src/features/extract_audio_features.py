@@ -154,8 +154,11 @@ def compute_audio_features(y):
     tempo, _ = librosa.beat.beat_track(y=y, sr=SR)
     onset_env = librosa.onset.onset_strength(y=y, sr=SR)
 
+    # Handle tempo as array or scalar
+    tempo_val = float(np.mean(tempo)) if isinstance(tempo, np.ndarray) else float(tempo)
+
     rhythm_features = np.array([
-        float(tempo),
+        tempo_val,
         float(onset_env.mean()),
         float(onset_env.std())
     ], dtype=np.float32)
@@ -183,6 +186,9 @@ print(f"Processing files...")
 label_rows = []
 pbar = tqdm(total=len(metadata), desc="Processing")
 file_index = 0
+skipped_missing = 0
+skipped_short = 0
+sample_missing_path = None
 
 for idx, row in metadata.iterrows():
     pbar.update(1)
@@ -190,11 +196,15 @@ for idx, row in metadata.iterrows():
 
     # Skip if file doesn't exist
     if not audio_path.exists():
+        skipped_missing += 1
+        if sample_missing_path is None:
+            sample_missing_path = str(audio_path)
         continue
 
     try:
         segments = load_3_segment_audio(str(audio_path))
         if segments is None:
+            skipped_short += 1
             continue
         
         start_segment, middle_segment, end_segment = segments
@@ -230,7 +240,23 @@ for idx, row in metadata.iterrows():
 
 pbar.close()
 
+# Report statistics
+print("\n" + "="*60)
+print("EXTRACTION SUMMARY:")
+print("="*60)
+print(f"Total files in metadata: {len(metadata)}")
+print(f"Successfully processed: {len(label_rows)}")
+print(f"Skipped (file not found): {skipped_missing}")
+print(f"Skipped (audio too short): {skipped_short}")
+
+if skipped_missing > 0:
+    print(f"\nERROR: Audio files not found!")
+    print(f"Expected path format: {sample_missing_path}")
+    print(f"Make sure the MAESTRO dataset audio files are downloaded to: {DATASET_DIR}")
+
+print("="*60)
+
 # Save labels
-print(f"Saving {len(label_rows)} labels to {LABELS_PATH}")
+print(f"\nSaving {len(label_rows)} labels to {LABELS_PATH}")
 pd.DataFrame(label_rows).to_csv(LABELS_PATH, index=False)
 print("Done!")
