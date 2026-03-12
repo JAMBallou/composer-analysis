@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Composer Classification</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Composer Classification</h1>
+            <p class="subtitle">Upload an audio or MIDI file to identify the composer</p>
+        </header>
+
+        <main>
+            <!-- Model Selection -->
+            <section class="section">
+                <h2>1. Select Model</h2>
+                <div id="modelSelection" class="model-selection">
+                    <p class="loading">Loading available models...</p>
+                </div>
+            </section>
+
+            <!-- File Upload -->
+            <section class="section">
+                <h2>2. Upload File</h2>
+                <div class="upload-container">
+                    <div class="upload-box">
+                        <h3>Audio File</h3>
+                        <p class="file-types">WAV, MP3, FLAC, OGG, M4A</p>
+                        <input type="file" id="audioFile" accept=".wav,.mp3,.flac,.ogg,.m4a">
+                        <label for="audioFile" class="file-label">
+                            <span id="audioFileName">Choose Audio File</span>
+                        </label>
+                    </div>
+
+                    <div class="or-divider">OR</div>
+
+                    <div class="upload-box">
+                        <h3>MIDI File</h3>
+                        <p class="file-types">MID, MIDI</p>
+                        <input type="file" id="midiFile" accept=".mid,.midi">
+                        <label for="midiFile" class="file-label">
+                            <span id="midiFileName">Choose MIDI File</span>
+                        </label>
+                    </div>
+                </div>
+                <p class="note">Note: You can upload both audio and MIDI for better accuracy, or just one.</p>
+            </section>
+
+            <!-- Predict Button -->
+            <section class="section">
+                <button id="predictBtn" class="predict-btn" disabled>
+                    Predict Composer
+                </button>
+                <div id="status" class="status"></div>
+            </section>
+
+            <!-- Results -->
+            <section class="section" id="resultsSection" style="display: none;">
+                <h2>Results</h2>
+                <div id="results" class="results">
+                    <!-- Results will be inserted here by JavaScript -->
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p><a href="https://github.com/JAMBallou/composer-analysis?tab=readme-ov-file#a-multimodal-neural-network-to-learn-stylistic-signatures-from-spectral-and-numerical-representations-of-the-maestro-dataset">Algorithmic Classification of Classical Piano Music By Composer | Jamison Ballou</a></p>
+            <p><a href="https://magenta.tensorflow.org/datasets/maestro">MAESTRO Dataset</a> | <a href="https://www.tensorflow.org/">TensorFlow</a></p>
+        </footer>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>

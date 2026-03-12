@@ -12,3 +12,6 @@ typing          # For type hints
 tqdm            # For progress bars
 nvidia-ml-py3   # For GPU memory monitoring
 pynvml          # Alternative NVIDIA management library
+flask           # Web framework for the web application
+werkzeug        # WSGI utility library for secure filename handling
+mido            # MIDI file parsing library
