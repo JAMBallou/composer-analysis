@@ -15,6 +15,25 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+def composer_last_name(label):
+    """Return a display label using only the composer's last name."""
+    label = str(label).strip()
+
+    if not label:
+        return label
+
+    if "," in label:
+        return label.split(",", 1)[0].strip()
+
+    parts = label.split()
+    return parts[-1] if parts else label
+
+
+def format_composer_labels(labels):
+    """Convert composer labels to last-name-only display labels."""
+    return [composer_last_name(label) for label in labels]
+
 def plot_confusion_matrix(
     cm,
     labels,
@@ -86,7 +105,7 @@ def plot_confusion_matrices_for_run(run_dir):
     if os.path.exists(json_path):
         with open(json_path, "r") as f:
             data = json.load(f)
-        labels = data["labels"]
+        labels = format_composer_labels(data["labels"])
         cm = np.array(data["matrix"])
     elif os.path.exists(npy_path):
         cm = np.load(npy_path)
@@ -166,7 +185,9 @@ if __name__ == "__main__":
         if os.path.exists(json_file):
             with open(json_file, 'r') as f:
                 data = json.load(f)
-            labels = data.get("labels", [f"Class {i}" for i in range(cm.shape[0])])
+            labels = format_composer_labels(
+                data.get("labels", [f"Class {i}" for i in range(cm.shape[0])])
+            )
         else:
             labels = [f"Class {i}" for i in range(cm.shape[0])]
         
