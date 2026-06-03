@@ -6,15 +6,19 @@ Diagnose which files were skipped during feature extraction and why.
 
 import pandas as pd
 from pathlib import Path
+import sys
 
-# Setup paths
+# Setup paths from config
 repo_root = Path(__file__).resolve().parent.parent
-features_dir = repo_root / "outputs" / "features"
-labels_csv = features_dir / "labels.csv"
-audio_dir = features_dir / "audio"
-midi_dir = features_dir / "midi"
-dataset_dir = repo_root / "data" / "maestro" / "data"
-metadata_csv = repo_root / "data" / "maestro" / "maestro-v3.0.0.csv"
+sys.path.insert(0, str(repo_root / "src"))
+from utils.config import FEATURES_DIR, AUDIO_FEATURES_DIR, MIDI_FEATURES_DIR, MAESTRO_DIR, METADATA_CSV
+
+features_dir = FEATURES_DIR
+labels_csv = FEATURES_DIR / "labels.csv"
+audio_dir = AUDIO_FEATURES_DIR
+midi_dir = MIDI_FEATURES_DIR
+dataset_dir = MAESTRO_DIR / "data"
+metadata_csv = METADATA_CSV
 
 # Load data
 print("Loading data...")

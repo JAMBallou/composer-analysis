@@ -344,6 +344,10 @@ def apply_deduplication(df: pd.DataFrame, strategy: str = 'first',
 
 # one-time executable script to remove unnecessary files from the dataset
 if __name__ == "__main__":
+    # Load config paths
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+    from utils.config import METADATA_CSV, MAESTRO_DIR
+
     parser = argparse.ArgumentParser(
         description=(
             "Filter MAESTRO dataset by top composers and/or deduplicate works. "
@@ -368,11 +372,11 @@ Examples:
     )
 
     # Input/output arguments
-    parser.add_argument("--csv", default=str(Path(__file__).resolve().parents[2] / "data" / "maestro" / "maestro-v3.0.0.csv"), 
+    parser.add_argument("--csv", default=str(METADATA_CSV), 
                        help="Path to maestro CSV metadata")
     parser.add_argument("--output", type=str, default=None,
                        help="Path to save filtered/deduplicated CSV (if not specified, updates original)")
-    parser.add_argument("--maestro-root", default=str(Path(__file__).resolve().parents[2] / "data" / "maestro"), 
+    parser.add_argument("--maestro-root", default=str(MAESTRO_DIR), 
                        help="Path to maestro root directory (contains 'data/' with audio/midi files)")
     
     # Filtering arguments

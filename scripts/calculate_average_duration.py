@@ -6,10 +6,14 @@ Calculate the average duration of audio samples in the MAESTRO dataset.
 
 import pandas as pd
 from pathlib import Path
+import sys
 
-# Paths
+# Make `src` importable so we can use `utils.config`
 REPO_ROOT = Path(__file__).resolve().parents[1]
-METADATA_PATH = REPO_ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
+sys.path.insert(0, str(REPO_ROOT / "src"))
+from utils.config import METADATA_CSV
+
+METADATA_PATH = METADATA_CSV
 
 # Load metadata
 df = pd.read_csv(METADATA_PATH)

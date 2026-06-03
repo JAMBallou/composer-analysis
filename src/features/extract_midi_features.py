@@ -36,6 +36,7 @@ Segmentation strategy:
 import os
 import sys
 from pathlib import Path
+from utils.config import MAESTRO_DIR, METADATA_CSV, MIDI_FEATURES_DIR, LABELS_CSV
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -49,12 +50,11 @@ from .advanced_midi_features import (
     compute_dynamic_features
 )
 
-# Compute paths relative to repo root (project dir)
-REPO_ROOT = Path(__file__).resolve().parents[2]
-METADATA_PATH = REPO_ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
-DATASET_DIR = REPO_ROOT / "data" / "maestro" / "data"
-OUTPUT_DIR = REPO_ROOT / "outputs" / "features" / "midi"
-LABELS_PATH = REPO_ROOT / "outputs" / "features" / "labels.csv"
+# Dataset + output paths from config
+METADATA_PATH = METADATA_CSV
+DATASET_DIR = MAESTRO_DIR / "data"
+OUTPUT_DIR = MIDI_FEATURES_DIR
+LABELS_PATH = LABELS_CSV
 
 # Create output directory
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

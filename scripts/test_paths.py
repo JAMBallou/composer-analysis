@@ -1,15 +1,20 @@
 import pandas as pd
 from pathlib import Path
+import sys
+
+# Make `src` importable so we can use `utils.config`
+REPO_ROOT = Path.cwd()
+sys.path.insert(0, str(REPO_ROOT / "src"))
+from utils.config import METADATA_CSV, MAESTRO_DIR
 
 # Check CSV
-df = pd.read_csv('data/maestro/maestro-v3.0.0.csv')
+df = pd.read_csv(METADATA_CSV)
 print("CSV audio_filename samples:")
 for i in range(3):
     print(f"  {df['audio_filename'].iloc[i]}")
 
 # Check what script constructs
-REPO_ROOT = Path.cwd()
-DATASET_DIR = REPO_ROOT / "data" / "maestro" / "data"
+DATASET_DIR = MAESTRO_DIR / "data"
 print(f"\nDATASET_DIR: {DATASET_DIR}")
 
 # Build path as script does

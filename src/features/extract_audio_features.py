@@ -24,17 +24,17 @@ Segmentation strategy:
 import os
 import sys
 from pathlib import Path
+from utils.config import MAESTRO_DIR, METADATA_CSV, AUDIO_FEATURES_DIR, LABELS_CSV
 import librosa
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-# Compute paths relative to repo root (project dir)
-REPO_ROOT = Path(__file__).resolve().parents[2]
-DATASET_DIR = REPO_ROOT / "data" / "maestro" / "data"
-METADATA_PATH = REPO_ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
-OUTPUT_DIR = REPO_ROOT / "outputs" / "features" / "audio"
-LABELS_PATH = REPO_ROOT / "outputs" / "features" / "labels.csv"
+# Dataset + output paths from config
+DATASET_DIR = MAESTRO_DIR / "data"
+METADATA_PATH = METADATA_CSV
+OUTPUT_DIR = AUDIO_FEATURES_DIR
+LABELS_PATH = LABELS_CSV
 
 SR = 22050
 N_MELS = 128

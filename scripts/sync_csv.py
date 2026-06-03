@@ -11,8 +11,12 @@ import pandas as pd
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-CSV = ROOT / "data" / "maestro" / "maestro-v3.0.0.csv"
-DATA_DIR = ROOT / "data" / "maestro" / "data"
+# Make `src` importable so we can use `utils.config`
+sys.path.insert(0, str(ROOT / "src"))
+from utils.config import METADATA_CSV, MAESTRO_DIR
+
+CSV = METADATA_CSV
+DATA_DIR = MAESTRO_DIR / "data"
 
 if not CSV.exists():
     print(f"CSV not found: {CSV}")

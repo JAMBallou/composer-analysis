@@ -296,6 +296,11 @@ def deduplicate_keep_train(df: pd.DataFrame, duplicates: Dict) -> pd.DataFrame:
 
 
 def main():
+    import sys
+    # Make `src` importable so we can use `utils.config`
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+    from utils.config import METADATA_CSV
+
     parser = argparse.ArgumentParser(
         description="Clean up duplicate works in MAESTRO dataset",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -315,7 +320,7 @@ Examples:
     parser.add_argument(
         '--input',
         type=str,
-        default='data/maestro/maestro-v3.0.0.csv',
+        default=str(METADATA_CSV),
         help='Input MAESTRO CSV file'
     )
     parser.add_argument(

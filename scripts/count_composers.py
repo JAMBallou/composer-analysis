@@ -10,6 +10,7 @@ Creates two files:
 
 import pandas as pd
 from pathlib import Path
+import sys
 
 
 def count_composers(csv_path: Path, output_path: Path):
@@ -48,7 +49,10 @@ def main():
     # Get paths
     script_dir = Path(__file__).resolve().parent
     repo_root = script_dir.parent
-    maestro_dir = repo_root / "data" / "maestro"
+    # Make `src` importable so we can use `utils.config`
+    sys.path.insert(0, str(repo_root / "src"))
+    from utils.config import MAESTRO_DIR
+    maestro_dir = MAESTRO_DIR
     
     # Original dataset (backup)
     backup_csv = maestro_dir / "maestro-v3.0.0.bak.csv"
